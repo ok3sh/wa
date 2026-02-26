@@ -49,9 +49,10 @@ app.get("/", (req, res) => res.send("OK"));
 app.get("/ping", (req, res) =>
   res.json({ ok: true, time: new Date().toISOString() })
 );
-app.get("/logo", (req, res) =>
-  res.sendFile(path.join(__dirname, "fin_logo.jpg"))
-);
+app.get("/logo", (req, res) => {
+  res.setHeader("Content-Type", "image/jpeg");
+  res.sendFile(path.join(__dirname, "fin_logo.jpg"));
+});
 
 /* ================= WEBHOOK VERIFY ================= */
 app.get("/webhook", (req, res) => {
