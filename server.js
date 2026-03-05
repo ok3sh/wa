@@ -44,6 +44,18 @@ app.use((req, res, next) => {
   next();
 });
 
+/* ================= MESSAGE DEDUP ================= */
+// Meta retries webhook delivery if it doesn't get a fast 200 (e.g. on Render cold start).
+// We keep a short-lived set of processed message IDs to silently drop duplicate deliveries.
+const seenMessages = new Map(); // messageId -> timestamp (ms)
+const DEDUP_TTL_MS = 5 * 60 * 1000; // 5 minutes
+setInterval(() => {
+  const cutoff = Date.now() - DEDUP_TTL_MS;
+  for (const [id, ts] of seenMessages) {
+    if (ts < cutoff) seenMessages.delete(id);
+  }
+}, DEDUP_TTL_MS).unref(); // don't block process exit
+
 /* ================= HEALTH ================= */
 app.get("/", (req, res) => res.send("OK"));
 app.get("/ping", (req, res) =>
@@ -66,93 +78,255 @@ app.get("/webhook", (req, res) => {
   return res.sendStatus(403);
 });
 
+/* ================= SESSION STATE ================= */
+// Tracks users who are currently mid-flow (e.g., waiting for grievance text)
+// session: { state: 'AWAITING_GRIEVANCE' }
+const userSessions = new Map(); // phone -> { state }
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 min
+setInterval(() => {
+  const cutoff = Date.now() - SESSION_TTL_MS;
+  for (const [phone, sess] of userSessions) {
+    if (sess.ts < cutoff) userSessions.delete(phone);
+  }
+}, SESSION_TTL_MS).unref();
+
 /* ================= WEBHOOK RECEIVER ================= */
 app.post("/webhook", async (req, res) => {
+  // ACK Meta immediately — this stops retries caused by slow Render cold-start responses.
+  res.sendStatus(200);
+
   try {
     const entry = req.body.entry?.[0];
     const change = entry?.changes?.[0];
     const value = change?.value;
     const message = value?.messages?.[0];
 
-    // Always 200 to Meta
-    if (!message) return res.sendStatus(200);
+    if (!message) return;
 
-    const from = message.from; // user's wa_id-ish number (string)
+    const from = message.from;
     const wa_id = value?.contacts?.[0]?.wa_id || from;
     const messageId = message.id;
 
-    /* -------- TEXT MESSAGE (ANY TEXT) -------- */
+    // Dedup check
+    if (seenMessages.has(messageId)) {
+      console.log("⚠️  Duplicate webhook ignored:", messageId);
+      return;
+    }
+    seenMessages.set(messageId, Date.now());
+
+    /* -------- TEXT MESSAGE -------- */
     if (message.type === "text") {
-      const text = message.text?.body?.toLowerCase()?.trim();
+      const text = message.text?.body?.trim();
+      const textLower = text?.toLowerCase();
       console.log("User text:", text);
 
-      const isGreeting = text === "hi" || text === "hello";
-      // Always show menu for any text (gibberish/help/etc -> menu)
-      await sendMenuButtons(from, isGreeting);
+      const session = userSessions.get(from);
+
+      // If user is in grievance-input state, treat the text as their grievance
+      if (session?.state === "AWAITING_GRIEVANCE") {
+        userSessions.delete(from);
+        await sendThankYouGeneric(
+          from,
+          "🙏 Thank you for raising your grievance.\n\nWe've noted your concern and our team will get back to you within 24–48 hours. We're here to help!"
+        );
+        return;
+      }
+
+      // Otherwise, any text triggers the main menu
+      const isGreeting = textLower === "hi" || textLower === "hello";
+      await sendMainMenu(from, isGreeting);
     }
 
-    /* -------- BUTTON CLICK -------- */
+    /* -------- BUTTON / LIST CLICK -------- */
     if (message.type === "interactive") {
-      const buttonId = message.interactive?.button_reply?.id;
-      console.log("Button clicked:", buttonId);
+      const buttonId =
+        message.interactive?.button_reply?.id ||
+        message.interactive?.list_reply?.id;
+      console.log("Button/List clicked:", buttonId);
 
+      // ── MAIN MENU ──────────────────────────────────────────────────────
+      if (buttonId === "MAIN_LOANS") {
+        await sendLoanSubMenu(from);
+        return;
+      }
+      if (buttonId === "MAIN_PARTNER") {
+        await sendPartnerSubMenu(from);
+        return;
+      }
+      if (buttonId === "MAIN_CONTACT") {
+        await sendContactSubMenu(from);
+        return;
+      }
+
+      // ── LOAN SUB-MENU ──────────────────────────────────────────────────
       if (PRODUCT_MAP[buttonId]) {
-        logLead({
-          phone: from,
-          wa_id,
-          product: buttonId,
-          productLabel: PRODUCT_MAP[buttonId],
-          messageId,
-        });
+        logLead({ phone: from, wa_id, product: buttonId, productLabel: PRODUCT_MAP[buttonId], messageId });
         await sendWebviewLink(from, PRODUCT_MAP[buttonId], buttonId);
+        return;
+      }
+
+      // ── PARTNER SUB-MENU ───────────────────────────────────────────────
+      const PARTNER_IDS = ["PARTNER_CORP", "PARTNER_DEV", "PARTNER_AFFILIATE", "PARTNER_DIGITAL"];
+      if (PARTNER_IDS.includes(buttonId)) {
+        await sendThankYouGeneric(
+          from,
+          "🤝 Thank you for your interest in partnering with Finfinity!\n\nOur partnerships team will review your request and get back to you within 2–3 business days. We look forward to working with you! 🚀"
+        );
+        return;
+      }
+
+      // ── CONTACT SUB-MENU ───────────────────────────────────────────────
+      if (buttonId === "CONTACT_RM") {
+        await sendThankYouGeneric(
+          from,
+          "📞 Thank you for reaching out!\n\nYour request has been noted. A Relationship Manager from Finfinity will get in touch with you shortly. We're here to help you every step of the way! 😊"
+        );
+        return;
+      }
+      if (buttonId === "CONTACT_FAQ") {
+        await sendFAQs(from);
+        return;
+      }
+      if (buttonId === "CONTACT_GRIEVANCE") {
+        userSessions.set(from, { state: "AWAITING_GRIEVANCE", ts: Date.now() });
+        await sendThankYouGeneric(
+          from,
+          "📝 Please type your grievance below and we'll make sure it reaches the right team.\n\nDescribe your issue and we'll get back to you as soon as possible."
+        );
+        return;
+      }
+
+      // ── BACK TO MENU ───────────────────────────────────────────────────
+      if (buttonId === "BACK_MENU") {
+        await sendMainMenu(from, false);
+        return;
       }
     }
-
-    return res.sendStatus(200);
   } catch (err) {
     console.error("Webhook error:", err.response?.data || err.message);
-    return res.sendStatus(200);
   }
 });
 
-/* ================= SEND MENU BUTTONS ================= */
-async function sendMenuButtons(to, isGreeting = false) {
+/* ================= WHATSAPP API HELPER ================= */
+async function waPost(to, payload) {
   const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
-
-  const messageText = isGreeting
-    ? "Hi 👋 Welcome to Finfinity!\n\nWhat are you looking for?"
-    : "I can help you with the following options 👇\n\nPlease choose one to continue:";
-
-  await axios.post(
+  return axios.post(
     url,
-    {
-      messaging_product: "whatsapp",
-      to,
-      type: "interactive",
-      interactive: {
-        type: "button",
-        body: { text: messageText },
-        action: {
-          buttons: [
-            { type: "reply", reply: { id: "EDU_LOAN", title: "🎓 Education Loan" } },
-            { type: "reply", reply: { id: "PERSONAL_LOAN", title: "💳 Personal Loan" } },
-            { type: "reply", reply: { id: "HOME_LOAN", title: "🏠 Home Loan" } },
-          ],
-        },
+    { messaging_product: "whatsapp", to, ...payload },
+    { headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" } }
+  );
+}
+
+/* ================= MAIN MENU (3 buttons) ================= */
+async function sendMainMenu(to, isGreeting = false) {
+  const bodyText = isGreeting
+    ? "Hey 👋 Welcome to *Finfinity*!\n\nHow can we help you today?"
+    : "Here's what we can help you with 👇\n\nPlease choose an option to continue:";
+
+  await waPost(to, {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: bodyText },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "MAIN_LOANS", title: "💰 Apply for a Loan" } },
+          { type: "reply", reply: { id: "MAIN_PARTNER", title: "🤝 Partner with Us" } },
+          { type: "reply", reply: { id: "MAIN_CONTACT", title: "📞 Contact Us" } },
+        ],
       },
     },
-    {
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
+  });
+}
+
+/* ================= LOAN SUB-MENU (3 buttons) ================= */
+async function sendLoanSubMenu(to) {
+  await waPost(to, {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: "Great! 💼 Which type of loan are you interested in?\n\nChoose one below and we'll take you to the application:" },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "EDU_LOAN", title: "🎓 Education Loan" } },
+          { type: "reply", reply: { id: "PERSONAL_LOAN", title: "💳 Personal Loan" } },
+          { type: "reply", reply: { id: "HOME_LOAN", title: "🏠 Home Loan" } },
+        ],
       },
-    }
-  );
+    },
+  });
+}
+
+/* ================= PARTNER SUB-MENU (list — 4 items) ================= */
+async function sendPartnerSubMenu(to) {
+  // WA interactive lists support up to 10 rows and are ideal for 4+ options
+  await waPost(to, {
+    type: "interactive",
+    interactive: {
+      type: "list",
+      body: { text: "We'd love to have you on board! 🚀\n\nPlease select the type of partnership you're interested in:" },
+      action: {
+        button: "Choose Partnership",
+        sections: [
+          {
+            title: "Partnership Types",
+            rows: [
+              { id: "PARTNER_CORP", title: "🏢 Corporate Partnership", description: "Strategic business tie-ups" },
+              { id: "PARTNER_DEV", title: "👨‍💻 Developer Partner", description: "API & tech integrations" },
+              { id: "PARTNER_AFFILIATE", title: "🔗 Affiliate Partner", description: "Earn by referring customers" },
+              { id: "PARTNER_DIGITAL", title: "📱 Digital Partner", description: "Digital marketing collaborations" },
+            ],
+          },
+        ],
+      },
+    },
+  });
+}
+
+/* ================= CONTACT SUB-MENU (3 buttons) ================= */
+async function sendContactSubMenu(to) {
+  await waPost(to, {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: "We're here to help! 🙌\n\nWhat would you like to do?" },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "CONTACT_RM", title: "🧑‍💼 Speak to an RM" } },
+          { type: "reply", reply: { id: "CONTACT_FAQ", title: "📖 Read FAQs" } },
+          { type: "reply", reply: { id: "CONTACT_GRIEVANCE", title: "📝 Raise a Grievance" } },
+        ],
+      },
+    },
+  });
+}
+
+/* ================= FAQ MESSAGE ================= */
+async function sendFAQs(to) {
+  const faqText =
+    "*📖 Frequently Asked Questions*\n\n" +
+    "*Q1. What documents are required for a loan?*\n" +
+    "You'll need your Aadhaar card, PAN card, 3-month bank statements, and latest salary slip or ITR.\n\n" +
+    "*Q2. How long does loan approval take?*\n" +
+    "Approvals typically take 24–72 hours after document submission.\n\n" +
+    "*Q3. What is the minimum & maximum loan amount?*\n" +
+    "Personal Loans: ₹50,000 – ₹25 Lakhs | Education Loans: Up to ₹75 Lakhs | Home Loans: Up to ₹5 Crores.\n\n" +
+    "*Q4. Is there a prepayment penalty?*\n" +
+    "No! Finfinity offers zero prepayment penalty on all loan products.\n\n" +
+    "*Q5. How do I track my application status?*\n" +
+    "Once applied, our RM will share your application reference number. You can track it on our portal or reach us directly here.\n\n" +
+    "_Have more questions? Just type anything and we'll bring up the menu again!_";
+
+  await waPost(to, { type: "text", text: { body: faqText } });
+}
+
+/* ================= GENERIC THANK-YOU TEXT ================= */
+async function sendThankYouGeneric(to, message) {
+  await waPost(to, { type: "text", text: { body: message } });
 }
 
 /* ================= SEND WEBVIEW LINK ================= */
 async function sendWebviewLink(to, productLabel, productKey) {
-  const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
 
   // Per-product personalised copy
   const COPY = {
@@ -204,21 +378,10 @@ async function sendWebviewLink(to, productLabel, productKey) {
     },
   };
 
-  await axios.post(
-    url,
-    {
-      messaging_product: "whatsapp",
-      to,
-      type: "interactive",
-      interactive,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  await waPost(to, {
+    type: "interactive",
+    interactive,
+  });
 
   console.log("✅ CTA message sent to", to, "|", productLabel);
 }
