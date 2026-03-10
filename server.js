@@ -305,16 +305,16 @@ async function sendContactSubMenu(to) {
 async function sendFAQs(to) {
   const faqText =
     "*📖 Frequently Asked Questions*\n\n" +
-    "*Q1. What documents are required for a loan?*\n" +
-    "You'll need your Aadhaar card, PAN card, 3-month bank statements, and latest salary slip or ITR.\n\n" +
-    "*Q2. How long does loan approval take?*\n" +
-    "Approvals typically take 24–72 hours after document submission.\n\n" +
-    "*Q3. What is the minimum & maximum loan amount?*\n" +
-    "Personal Loans: ₹50,000 – ₹25 Lakhs | Education Loans: Up to ₹75 Lakhs | Home Loans: Up to ₹5 Crores.\n\n" +
-    "*Q4. Is there a prepayment penalty?*\n" +
-    "No! Finfinity offers zero prepayment penalty on all loan products.\n\n" +
-    "*Q5. How do I track my application status?*\n" +
-    "Once applied, our RM will share your application reference number. You can track it on our portal or reach us directly here.\n\n" +
+    "*Q1. What is Finfinity?*\n" +
+    "Finfinity is a digital platform where you can explore financial products like loans, investments, DigiGold/DigiSilver, and wellness services in one place.\n\n" +
+    "*Q2. What products can I access on Finfinity?*\n" +
+    "On Finfinity you can explore personal loans, home loans, business loans, DigiGold, DigiSilver, investment options, and wellness partner services.\n\n" +
+    "*Q3. What are DigiGold and DigiSilver on Finfinity and who powers them?*\n" +
+    "DigiGold and DigiSilver allow you to buy gold and silver digitally in small amounts starting from just ₹10. Finfinity has partnered with Augmont, ensuring that every purchase is backed by 100% physical gold or silver stored in secure vaults.\n\n" +
+    "*Q4. How can I download the Finfinity app?*\n" +
+    "You can download the Finfinity app from the Google Play Store or Apple App Store and start exploring financial products easily: https://sgpl.finfinity.co.in/FinApp/\n\n" +
+    "*Q5. Is it free to sign up on Finfinity?*\n" +
+    "Yes, signing up on Finfinity is completely free, and you can browse and compare products before applying or investing.\n\n" +
     "_Have more questions? Just type anything and we'll bring up the menu again!_";
 
   await waPost(to, { type: "text", text: { body: faqText } });
