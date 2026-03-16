@@ -24,6 +24,7 @@ const logger = require("../utils/logger");
 
 const router = express.Router();
 
+// Verify webhook origin when APP_SECRET is configured; stays permissive for legacy setups.
 function verifyMetaSignature(req) {
   if (!APP_SECRET) return true;
 
@@ -62,6 +63,7 @@ router.post("/webhook", async (req, res) => {
     return res.sendStatus(403);
   }
 
+  // ACK immediately so Meta does not retry on slow downstream operations.
   res.sendStatus(200);
 
   try {
@@ -74,6 +76,7 @@ router.post("/webhook", async (req, res) => {
     const wa_id = value?.contacts?.[0]?.wa_id || from;
     const messageId = message.id;
 
+    // Ignore already-seen message IDs to prevent duplicate user responses.
     if (isDuplicateMessage(messageId)) {
       logger.info("duplicate_webhook_ignored", {
         requestId: req.requestId,
@@ -97,11 +100,13 @@ router.post("/webhook", async (req, res) => {
         return;
       }
 
+      // Any regular text returns the user to the top-level menu.
       const isGreeting = textLower === "hi" || textLower === "hello";
       await sendMainMenu(from, isGreeting);
       return;
     }
 
+    // Interactive payloads are button/list replies from WhatsApp.
     if (message.type !== "interactive") return;
 
     const buttonId =

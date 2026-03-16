@@ -1,4 +1,5 @@
 function log(level, message, meta = {}) {
+  // JSON logs are easier to search/filter in production log aggregators.
   const entry = {
     ts: new Date().toISOString(),
     level,
@@ -35,6 +36,7 @@ function error(message, meta) {
 function requestLogger(req, res, next) {
   const start = Date.now();
 
+  // Emit one request summary line after response completion.
   res.on("finish", () => {
     info("http_request", {
       requestId: req.requestId,

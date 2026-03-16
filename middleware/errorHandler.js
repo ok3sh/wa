@@ -1,6 +1,7 @@
 const { error } = require("../utils/logger");
 
 function notFoundHandler(req, res, next) {
+  // Keep 404 responses consistent with API error shape.
   res.status(404).json({
     ok: false,
     error: "Not Found",
@@ -9,6 +10,7 @@ function notFoundHandler(req, res, next) {
 }
 
 function errorHandler(err, req, res, next) {
+  // Log full diagnostic context, but only expose safe details to clients.
   error("unhandled_error", {
     requestId: req.requestId,
     message: err.message,

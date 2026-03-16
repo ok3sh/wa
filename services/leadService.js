@@ -4,6 +4,7 @@ const { CSV_FILE, PRODUCT_MAP } = require("../config");
 
 const CSV_HEADER = "timestamp,phone_number,wa_id,product,product_label,message_id\n";
 
+// Create the CSV lazily so first deployment works even on an empty volume.
 function ensureCsvFile() {
   if (!fs.existsSync(CSV_FILE)) {
     fs.writeFileSync(CSV_FILE, CSV_HEADER, "utf8");
@@ -12,6 +13,7 @@ function ensureCsvFile() {
 
 function logLead({ phone, wa_id, product, productLabel, messageId }) {
   const timestamp = new Date().toISOString();
+  // Minimal CSV escaping to preserve commas/quotes in values.
   const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
   const row =
@@ -40,6 +42,7 @@ function readLeadsFromCsv() {
   if (!raw) return [];
 
   const lines = raw.split("\n");
+  // Supports both the current header-based CSV and older rows without headers.
   const startIdx = lines[0].includes("timestamp") ? 1 : 0;
 
   const leads = [];
@@ -102,6 +105,7 @@ function computeAnalytics(leads) {
   const totalLeads = leads.length;
   const byProduct = {};
 
+  // Seed charts so products always appear even when count is zero.
   for (const label of Object.values(PRODUCT_MAP)) byProduct[label] = 0;
 
   const byHourIST = {};
@@ -110,6 +114,7 @@ function computeAnalytics(leads) {
   const byDay = {};
   const byUser = {};
   const uniqueUsers = new Set();
+  // Compute time trends in IST to align with business reporting.
   const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
   for (const lead of leads) {

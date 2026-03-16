@@ -22,6 +22,7 @@ function shouldRetry(err) {
   return status === 429 || status >= 500;
 }
 
+// Shared WhatsApp Graph API sender with timeout and bounded retry/backoff.
 async function waPost(to, payload) {
   const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
 
@@ -176,6 +177,7 @@ async function sendThankYouGeneric(to, message) {
   await waPost(to, { type: "text", text: { body: message } });
 }
 
+// Sends a CTA URL message tailored to the selected product.
 async function sendWebviewLink(to, productLabel, productKey) {
   const copy = {
     EDU_LOAN: {
