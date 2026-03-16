@@ -6,19 +6,53 @@ const {
   WEBVIEW_LINK,
   IMAGE_URL,
 } = require("../config");
+const logger = require("../utils/logger");
+
+const WA_TIMEOUT_MS = Number(process.env.WA_TIMEOUT_MS || 10000);
+const WA_RETRY_COUNT = Number(process.env.WA_RETRY_COUNT || 2);
+const WA_RETRY_BASE_MS = Number(process.env.WA_RETRY_BASE_MS || 400);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetry(err) {
+  if (!err.response) return true;
+  const status = err.response.status;
+  return status === 429 || status >= 500;
+}
 
 async function waPost(to, payload) {
   const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
-  return axios.post(
-    url,
-    { messaging_product: "whatsapp", to, ...payload },
-    {
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
-      },
+
+  for (let attempt = 0; attempt <= WA_RETRY_COUNT; attempt++) {
+    try {
+      return await axios.post(
+        url,
+        { messaging_product: "whatsapp", to, ...payload },
+        {
+          timeout: WA_TIMEOUT_MS,
+          headers: {
+            Authorization: `Bearer ${TOKEN}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    } catch (err) {
+      const canRetry = attempt < WA_RETRY_COUNT && shouldRetry(err);
+      if (!canRetry) throw err;
+
+      const waitMs = WA_RETRY_BASE_MS * 2 ** attempt;
+      logger.warn("whatsapp_api_retry", {
+        to,
+        attempt: attempt + 1,
+        waitMs,
+        status: err.response?.status,
+        error: err.message,
+      });
+      await sleep(waitMs);
     }
-  );
+  }
 }
 
 async function sendMainMenu(to, isGreeting = false) {
@@ -193,7 +227,7 @@ async function sendWebviewLink(to, productLabel, productKey) {
     interactive,
   });
 
-  console.log("CTA message sent to", to, "|", productLabel);
+  logger.info("cta_message_sent", { to, productLabel });
 }
 
 module.exports = {

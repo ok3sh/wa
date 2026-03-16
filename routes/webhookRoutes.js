@@ -1,6 +1,7 @@
 const express = require("express");
+const crypto = require("crypto");
 
-const { VERIFY_TOKEN, PRODUCT_MAP } = require("../config");
+const { VERIFY_TOKEN, PRODUCT_MAP, APP_SECRET } = require("../config");
 const { logLead } = require("../services/leadService");
 const {
   isDuplicateMessage,
@@ -18,8 +19,28 @@ const {
   sendFAQs,
   sendWebviewLink,
 } = require("../services/whatsappService");
+const { extractWebhookMessage } = require("../validators/webhookValidator");
+const logger = require("../utils/logger");
 
 const router = express.Router();
+
+function verifyMetaSignature(req) {
+  if (!APP_SECRET) return true;
+
+  const signature = req.get("x-hub-signature-256");
+  if (!signature || !req.rawBody) return false;
+
+  const expected = `sha256=${crypto
+    .createHmac("sha256", APP_SECRET)
+    .update(req.rawBody)
+    .digest("hex")}`;
+
+  const actualBuf = Buffer.from(signature);
+  const expectedBuf = Buffer.from(expected);
+
+  if (actualBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(actualBuf, expectedBuf);
+}
 
 router.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
@@ -34,22 +55,30 @@ router.get("/webhook", (req, res) => {
 });
 
 router.post("/webhook", async (req, res) => {
+  if (!verifyMetaSignature(req)) {
+    logger.warn("Rejected webhook due to invalid signature", {
+      requestId: req.requestId,
+    });
+    return res.sendStatus(403);
+  }
+
   res.sendStatus(200);
 
   try {
-    const entry = req.body.entry?.[0];
-    const change = entry?.changes?.[0];
-    const value = change?.value;
-    const message = value?.messages?.[0];
+    const payload = extractWebhookMessage(req.body);
+    if (!payload) return;
 
-    if (!message) return;
+    const { value, message } = payload;
 
     const from = message.from;
     const wa_id = value?.contacts?.[0]?.wa_id || from;
     const messageId = message.id;
 
     if (isDuplicateMessage(messageId)) {
-      console.log("Duplicate webhook ignored:", messageId);
+      logger.info("duplicate_webhook_ignored", {
+        requestId: req.requestId,
+        messageId,
+      });
       return;
     }
     markMessageSeen(messageId);
@@ -144,7 +173,10 @@ router.post("/webhook", async (req, res) => {
       await sendMainMenu(from, false);
     }
   } catch (err) {
-    console.error("Webhook error:", err.response?.data || err.message);
+    logger.error("Webhook error", {
+      requestId: req.requestId,
+      error: err.response?.data || err.message,
+    });
   }
 });
 

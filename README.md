@@ -9,9 +9,13 @@ Create a `.env` file with:
 - `TOKEN=<meta_whatsapp_access_token>`
 - `PHONE_NUMBER_ID=<meta_phone_number_id>`
 - `WA_VERIFY_TOKEN=<your_verify_token>`
+- `APP_SECRET=<meta_app_secret>` (recommended for webhook signature verification)
 - `PORT=3000` (optional)
 - `IMAGE_URL=<optional_header_image_url>` (optional)
 - `WEBVIEW_LINK=<optional_override_url>` (optional)
+- `WA_TIMEOUT_MS=10000` (optional)
+- `WA_RETRY_COUNT=2` (optional)
+- `WA_RETRY_BASE_MS=400` (optional)
 
 ## Run Locally
 
