@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Finfinity - Lead Analytics</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080e1a;
+      --surface: #0f1829;
+      --border: rgba(99,130,206,0.15);
+      --accent: #4f8ef7;
+      --accent2: #a78bfa;
+      --accent3: #34d399;
+      --text: #e2eafc;
+      --muted: #6b80a8;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15,24,41,0.8);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4f8ef7 0%, #a78bfa 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text { font-size: 18px; font-weight: 700; }
+    .logo-sub { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .refresh-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent3);
+      box-shadow: 0 0 0 0 rgba(52,211,153,.6);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(52,211,153,.6); }
+      70% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+      100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+    }
+
+    .refresh-label { font-size: 12px; color: var(--muted); }
+    .btn-raw {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid rgba(79,142,247,.3);
+      border-radius: 8px;
+      padding: 6px 12px;
+      transition: background .2s;
+    }
+
+    .btn-raw:hover { background: rgba(79,142,247,.1); }
+
+    main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+    .section-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 14px; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 16px; margin-bottom: 28px; }
+    .kpi-card {
+      border-radius: 16px;
+      padding: 20px 22px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-value { font-size: 34px; font-weight: 800; line-height: 1; }
+    .kpi-label { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 500; }
+
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+    .chart-card {
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-card canvas { height: 260px !important; }
+    .chart-card.full canvas { height: 200px !important; }
+    .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; color: var(--text); }
+    .chart-sub { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+
+    .table-card {
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+
+    .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .table-header h3 { font-size: 13px; font-weight: 600; }
+    .badge { background: rgba(79,142,247,.15); color: var(--accent); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: rgba(20,31,53,1); }
+    th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 10px 16px; text-align: left; }
+    td { font-size: 13px; padding: 11px 16px; border-top: 1px solid var(--border); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+
+    .pill.edu { background: rgba(79,142,247,.15); color: #7eb3ff; }
+    .pill.home { background: rgba(52,211,153,.15); color: #5be4ac; }
+    .pill.pers { background: rgba(167,139,250,.15); color: #c4b0ff; }
+    .pill.unknown { background: rgba(107,128,168,.15); color: var(--muted); }
+
+    .ts { color: var(--muted); font-size: 12px; }
+    .phone-num { font-family: monospace; font-size: 12px; background: rgba(255,255,255,.05); padding: 2px 6px; border-radius: 6px; }
+    footer { text-align: center; font-size: 11px; color: var(--muted); padding: 16px 0 28px; }
+
+    @media (max-width: 768px) {
+      header { padding: 14px 16px; }
+      main { padding: 20px 16px; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .chart-card.full { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon">💬</div>
+    <div>
+      <div class="logo-text">Finfinity</div>
+      <div class="logo-sub">WhatsApp Lead Analytics</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="refresh-dot"></div>
+    <span class="refresh-label">Live - 15s refresh</span>
+    <a href="/analytics" target="_blank" class="btn-raw">Raw JSON</a>
+  </div>
+</header>
+
+<main>
+  <div class="section-title">Overview</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-value" id="kpiTotal">-</div>
+      <div class="kpi-label">Total Leads</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" id="kpiUsers">-</div>
+      <div class="kpi-label">Unique Users</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" id="kpiTopShort">-</div>
+      <div class="kpi-label" id="kpiTopLabel">Top Product</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" id="kpiUpdated" style="font-size:14px;font-weight:600;margin-top:4px;">-</div>
+      <div class="kpi-label">Last Updated (IST)</div>
+    </div>
+  </div>
+
+  <div class="section-title">Trends</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Product Interest Split</div>
+      <div class="chart-sub">Which loan type users enquired about</div>
+      <canvas id="chartProduct"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">New vs Returning Users</div>
+      <div class="chart-sub">Users with single vs multiple enquiries</div>
+      <canvas id="chartRepeat"></canvas>
+    </div>
+    <div class="chart-card full">
+      <div class="chart-title">Peak Enquiry Hours (IST)</div>
+      <div class="chart-sub">When users are most active (6 AM - 11 PM IST)</div>
+      <canvas id="chartHour"></canvas>
+    </div>
+  </div>
+
+  <div class="section-title">Recent Leads</div>
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Lead Log</h3>
+      <span class="badge" id="tableCount">0 entries</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Timestamp (IST)</th>
+            <th>Phone</th>
+            <th>Product</th>
+          </tr>
+        </thead>
+        <tbody id="leadsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer>Finfinity WhatsApp Bot - Data from leads.csv - Auto-refresh every 15s</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  let productChart;
+  let repeatChart;
+  let hourChart;
+
+  function toIST(isoStr) {
+    if (!isoStr) return '-';
+    const d = new Date(isoStr);
+    if (isNaN(d)) return isoStr;
+    return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function pillClass(product) {
+    if (!product) return 'unknown';
+    const p = product.toUpperCase();
+    if (p.includes('EDU')) return 'edu';
+    if (p.includes('HOME')) return 'home';
+    if (p.includes('PERS')) return 'pers';
+    return 'unknown';
+  }
+
+  function buildTable(leads) {
+    const tbody = document.getElementById('leadsBody');
+    const count = document.getElementById('tableCount');
+    count.textContent = leads.length + ' entries';
+    tbody.innerHTML = leads.map((l, i) => `
+      <tr>
+        <td style="color:var(--muted)">${i + 1}</td>
+        <td class="ts">${toIST(l.timestamp)}</td>
+        <td><span class="phone-num">${l.phone_number || l.wa_id || '-'}</span></td>
+        <td><span class="pill ${pillClass(l.product)}">${l.product_label || l.product || '-'}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  function buildProductChart(labels, values) {
+    const cfg = {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: ['#4f8ef7cc','#34d399cc','#a78bfa99'],
+          borderColor: ['#4f8ef7','#34d399','#a78bfa'],
+          borderWidth: 2,
+          hoverOffset: 6,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: { color: '#9fb2d9', boxWidth: 12, padding: 16, font: { size: 12 } },
+          },
+        },
+      },
+    };
+
+    if (!productChart) {
+      productChart = new Chart(document.getElementById('chartProduct'), cfg);
+      return;
+    }
+
+    productChart.data.labels = labels;
+    productChart.data.datasets[0].data = values;
+    productChart.update();
+  }
+
+  function buildRepeatChart(single, repeat) {
+    const cfg = {
+      type: 'doughnut',
+      data: {
+        labels: ['First-time (1 enquiry)', 'Returning (2+ enquiries)'],
+        datasets: [{
+          data: [single, repeat],
+          backgroundColor: ['#4f8ef7cc','#fb923ccc'],
+          borderColor: ['#4f8ef7','#fb923c'],
+          borderWidth: 2,
+          hoverOffset: 6,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+      },
+    };
+
+    if (!repeatChart) {
+      repeatChart = new Chart(document.getElementById('chartRepeat'), cfg);
+      return;
+    }
+
+    repeatChart.data.datasets[0].data = [single, repeat];
+    repeatChart.update();
+  }
+
+  function buildHourChart(byHourIST) {
+    const labels = [];
+    const values = [];
+    for (let h = 6; h <= 23; h++) {
+      const ampm = h < 12 ? `${h === 0 ? 12 : h} AM` : (h === 12 ? '12 PM' : `${h - 12} PM`);
+      labels.push(ampm);
+      values.push(byHourIST[String(h)] || 0);
+    }
+
+    const max = Math.max(...values, 1);
+    const gradCtx = document.getElementById('chartHour').getContext('2d');
+    const grad = gradCtx.createLinearGradient(0, 0, 0, 200);
+    grad.addColorStop(0, 'rgba(79,142,247,0.9)');
+    grad.addColorStop(1, 'rgba(79,142,247,0.2)');
+
+    const cfg = {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: grad,
+          borderColor: '#4f8ef7',
+          borderWidth: 1,
+          borderRadius: 6,
+          borderSkipped: false,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, max: max + 1 },
+        },
+      },
+    };
+
+    if (!hourChart) {
+      hourChart = new Chart(document.getElementById('chartHour'), cfg);
+      return;
+    }
+
+    hourChart.data.labels = labels;
+    hourChart.data.datasets[0].data = values;
+    hourChart.update();
+  }
+
+  async function load() {
+    try {
+      const [analyticsRes, recentRes] = await Promise.all([
+        fetch('/analytics'),
+        fetch('/api/leads/recent?limit=50'),
+      ]);
+
+      const data = await analyticsRes.json();
+      const recent = await recentRes.json();
+
+      document.getElementById('kpiTotal').textContent = data.totalLeads;
+      document.getElementById('kpiUsers').textContent = data.uniqueUsers;
+
+      const entries = Object.entries(data.byProduct || {}).sort((a, b) => b[1] - a[1]);
+      const topEntry = entries.find((e) => e[1] > 0) || entries[0];
+      if (topEntry) {
+        document.getElementById('kpiTopShort').textContent = topEntry[0].replace(' Loan', '');
+        document.getElementById('kpiTopLabel').textContent = `${topEntry[1]} leads - Top Product`;
+      }
+
+      document.getElementById('kpiUpdated').textContent = toIST(data.updatedAt);
+      buildProductChart(entries.map((e) => e[0]), entries.map((e) => e[1]));
+
+      const rs = data.repeatStats || { singleEnquiry: 0, repeatEnquiry: 0 };
+      buildRepeatChart(rs.singleEnquiry, rs.repeatEnquiry);
+      buildHourChart(data.byHourIST || {});
+      buildTable(recent);
+    } catch (e) {
+      console.error('Dashboard refresh failed', e);
+    }
+  }
+
+  load();
+  setInterval(load, 15000);
+</script>
+</body>
+</html>

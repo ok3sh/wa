@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  finfinity-wa-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: finfinity-wa-bot
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./leads.csv:/app/leads.csv

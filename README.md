@@ -1,1 +1,66 @@
 # Finfinity-wa-bot
+
+WhatsApp webhook bot for Finfinity, with lead logging and analytics dashboard.
+
+## Environment
+
+Create a `.env` file with:
+
+- `TOKEN=<meta_whatsapp_access_token>`
+- `PHONE_NUMBER_ID=<meta_phone_number_id>`
+- `WA_VERIFY_TOKEN=<your_verify_token>`
+- `PORT=3000` (optional)
+- `IMAGE_URL=<optional_header_image_url>` (optional)
+- `WEBVIEW_LINK=<optional_override_url>` (optional)
+
+## Run Locally
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start server:
+
+```bash
+npm start
+```
+
+3. Health check:
+
+```bash
+curl http://localhost:3000/ping
+```
+
+## Run With Docker
+
+Build and run:
+
+```bash
+docker compose -f docker.yml up --build -d
+```
+
+Stop:
+
+```bash
+docker compose -f docker.yml down
+```
+
+The container mounts `leads.csv` as a volume so lead data persists across restarts.
+
+## Routes
+
+- `GET /` health text
+- `GET /ping` health json
+- `GET /webhook` Meta verification
+- `POST /webhook` webhook receiver
+- `GET /dashboard` analytics dashboard
+- `GET /analytics` raw analytics json
+
+
+For higher scale next, add:
+
+Postgres for leads instead of CSV.
+Redis for dedup/session state (so multiple app instances stay consistent).
+Queue/retry for outbound WhatsApp sends and observability logs.
