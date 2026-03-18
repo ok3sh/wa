@@ -1,7 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 
-const { VERIFY_TOKEN, PRODUCT_MAP, APP_SECRET } = require("../config");
+const { VERIFY_TOKEN, /* PRODUCT_MAP, */ APP_SECRET } = require("../config"); // PRODUCT_MAP TEMPORARILY DISABLED
 const { logLead } = require("../services/leadService");
 const {
   isDuplicateMessage,
@@ -12,12 +12,12 @@ const {
 } = require("../services/sessionService");
 const {
   sendMainMenu,
-  sendLoanSubMenu,
+  // sendLoanSubMenu,    // TEMPORARILY DISABLED
   sendPartnerSubMenu,
   sendContactSubMenu,
   sendThankYouGeneric,
   sendFAQs,
-  sendWebviewLink,
+  // sendWebviewLink,    // TEMPORARILY DISABLED
 } = require("../services/whatsappService");
 const { extractWebhookMessage } = require("../validators/webhookValidator");
 const logger = require("../utils/logger");
@@ -115,10 +115,11 @@ router.post("/webhook", async (req, res) => {
 
     if (!buttonId) return;
 
-    if (buttonId === "MAIN_LOANS") {
-      await sendLoanSubMenu(from);
-      return;
-    }
+    // TEMPORARILY DISABLED — Apply for a Loan flow
+    // if (buttonId === "MAIN_LOANS") {
+    //   await sendLoanSubMenu(from);
+    //   return;
+    // }
 
     if (buttonId === "MAIN_PARTNER") {
       await sendPartnerSubMenu(from);
@@ -130,18 +131,19 @@ router.post("/webhook", async (req, res) => {
       return;
     }
 
-    if (PRODUCT_MAP[buttonId]) {
-      logLead({
-        phone: from,
-        wa_id,
-        product: buttonId,
-        productLabel: PRODUCT_MAP[buttonId],
-        messageId,
-      });
-
-      await sendWebviewLink(from, PRODUCT_MAP[buttonId], buttonId);
-      return;
-    }
+    // TEMPORARILY DISABLED — Loan product selection and webview link
+    // if (PRODUCT_MAP[buttonId]) {
+    //   logLead({
+    //     phone: from,
+    //     wa_id,
+    //     product: buttonId,
+    //     productLabel: PRODUCT_MAP[buttonId],
+    //     messageId,
+    //   });
+    //
+    //   await sendWebviewLink(from, PRODUCT_MAP[buttonId], buttonId);
+    //   return;
+    // }
 
     const partnerIds = ["PARTNER_CORP", "PARTNER_DEV", "PARTNER_AFFILIATE", "PARTNER_DIGITAL"];
     if (partnerIds.includes(buttonId)) {

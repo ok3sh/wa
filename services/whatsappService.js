@@ -68,7 +68,7 @@ async function sendMainMenu(to, isGreeting = false) {
       body: { text: bodyText },
       action: {
         buttons: [
-          { type: "reply", reply: { id: "MAIN_LOANS", title: "💰 Apply for a Loan" } },
+          // { type: "reply", reply: { id: "MAIN_LOANS", title: "💰 Apply for a Loan" } }, // TEMPORARILY DISABLED
           { type: "reply", reply: { id: "MAIN_PARTNER", title: "🤝 Partner with Us" } },
           { type: "reply", reply: { id: "MAIN_CONTACT", title: "📞 Contact Us" } },
         ],
@@ -77,24 +77,25 @@ async function sendMainMenu(to, isGreeting = false) {
   });
 }
 
-async function sendLoanSubMenu(to) {
-  await waPost(to, {
-    type: "interactive",
-    interactive: {
-      type: "button",
-      body: {
-        text: "Great! 💼 Which type of loan are you interested in?\n\nChoose one below and we'll take you to the application:",
-      },
-      action: {
-        buttons: [
-          { type: "reply", reply: { id: "EDU_LOAN", title: "🎓 Education Loan" } },
-          { type: "reply", reply: { id: "PERSONAL_LOAN", title: "💳 Personal Loan" } },
-          { type: "reply", reply: { id: "HOME_LOAN", title: "🏠 Home Loan" } },
-        ],
-      },
-    },
-  });
-}
+// TEMPORARILY DISABLED — Apply for a Loan flow
+// async function sendLoanSubMenu(to) {
+//   await waPost(to, {
+//     type: "interactive",
+//     interactive: {
+//       type: "button",
+//       body: {
+//         text: "Great! 💼 Which type of loan are you interested in?\n\nChoose one below and we'll take you to the application:",
+//       },
+//       action: {
+//         buttons: [
+//           { type: "reply", reply: { id: "EDU_LOAN", title: "🎓 Education Loan" } },
+//           { type: "reply", reply: { id: "PERSONAL_LOAN", title: "💳 Personal Loan" } },
+//           { type: "reply", reply: { id: "HOME_LOAN", title: "🏠 Home Loan" } },
+//         ],
+//       },
+//     },
+//   });
+// }
 
 async function sendPartnerSubMenu(to) {
   await waPost(to, {
@@ -177,67 +178,67 @@ async function sendThankYouGeneric(to, message) {
   await waPost(to, { type: "text", text: { body: message } });
 }
 
-// Sends a CTA URL message tailored to the selected product.
-async function sendWebviewLink(to, productLabel, productKey) {
-  const copy = {
-    EDU_LOAN: {
-      emoji: "🎓",
-      headline: "Education Loan - Let's get you started!",
-      body: "Invest in your future with the right financial support.\nOur team is here to make your education loan journey smooth and hassle-free.",
-    },
-    PERSONAL_LOAN: {
-      emoji: "💳",
-      headline: "Personal Loan - Quick & Easy!",
-      body: "Need funds for any personal goal? We've got you covered.\nFast approvals, minimal paperwork - let's move forward together.",
-    },
-    HOME_LOAN: {
-      emoji: "🏠",
-      headline: "Home Loan - Your dream home awaits!",
-      body: "Take the first step towards owning your dream home.\nCompetitive rates, flexible tenure - our experts will guide you through every step.",
-    },
-  };
-
-  const content = copy[productKey] || {
-    emoji: "✨",
-    headline: `${productLabel} - Let's get started!`,
-    body: "Our team is ready to help you take the next step.",
-  };
-
-  const bodyText =
-    `${content.emoji} *${content.headline}*\n\n` +
-    `${content.body}\n\n` +
-    "Tap the button below to begin your application.";
-
-  const header = IMAGE_URL ? { type: "image", image: { link: IMAGE_URL } } : undefined;
-
-  const interactive = {
-    type: "cta_url",
-    ...(header && { header }),
-    body: { text: bodyText },
-    footer: { text: "Finfinity Financial Services" },
-    action: {
-      name: "cta_url",
-      parameters: {
-        display_text: "Apply Now ->",
-        url: WEBVIEW_LINK,
-      },
-    },
-  };
-
-  await waPost(to, {
-    type: "interactive",
-    interactive,
-  });
-
-  logger.info("cta_message_sent", { to, productLabel });
-}
+// TEMPORARILY DISABLED — Loan product CTA webview link
+// async function sendWebviewLink(to, productLabel, productKey) {
+//   const copy = {
+//     EDU_LOAN: {
+//       emoji: "🎓",
+//       headline: "Education Loan - Let's get you started!",
+//       body: "Invest in your future with the right financial support.\nOur team is here to make your education loan journey smooth and hassle-free.",
+//     },
+//     PERSONAL_LOAN: {
+//       emoji: "💳",
+//       headline: "Personal Loan - Quick & Easy!",
+//       body: "Need funds for any personal goal? We've got you covered.\nFast approvals, minimal paperwork - let's move forward together.",
+//     },
+//     HOME_LOAN: {
+//       emoji: "🏠",
+//       headline: "Home Loan - Your dream home awaits!",
+//       body: "Take the first step towards owning your dream home.\nCompetitive rates, flexible tenure - our experts will guide you through every step.",
+//     },
+//   };
+//
+//   const content = copy[productKey] || {
+//     emoji: "✨",
+//     headline: `${productLabel} - Let's get started!`,
+//     body: "Our team is ready to help you take the next step.",
+//   };
+//
+//   const bodyText =
+//     `${content.emoji} *${content.headline}*\n\n` +
+//     `${content.body}\n\n` +
+//     "Tap the button below to begin your application.";
+//
+//   const header = IMAGE_URL ? { type: "image", image: { link: IMAGE_URL } } : undefined;
+//
+//   const interactive = {
+//     type: "cta_url",
+//     ...(header && { header }),
+//     body: { text: bodyText },
+//     footer: { text: "Finfinity Financial Services" },
+//     action: {
+//       name: "cta_url",
+//       parameters: {
+//         display_text: "Apply Now ->",
+//         url: WEBVIEW_LINK,
+//       },
+//     },
+//   };
+//
+//   await waPost(to, {
+//     type: "interactive",
+//     interactive,
+//   });
+//
+//   logger.info("cta_message_sent", { to, productLabel });
+// }
 
 module.exports = {
   sendMainMenu,
-  sendLoanSubMenu,
+  // sendLoanSubMenu,    // TEMPORARILY DISABLED
   sendPartnerSubMenu,
   sendContactSubMenu,
   sendFAQs,
   sendThankYouGeneric,
-  sendWebviewLink,
+  // sendWebviewLink,    // TEMPORARILY DISABLED
 };
