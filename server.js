@@ -18,6 +18,10 @@ startCleanupJobs();
 
 const app = express();
 
+// Trust the X-Forwarded-For header from reverse proxy (nginx, load balancer, etc.)
+// Required for express-rate-limit to work correctly in production.
+app.set('trust proxy', 1);
+
 // Keep rawBody for optional Meta signature checks while parsing JSON normally.
 app.use(
   express.json({

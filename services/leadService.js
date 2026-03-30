@@ -10,6 +10,12 @@ function ensureCsvFile() {
   if (!fs.existsSync(CSV_FILE)) {
     fs.writeFileSync(CSV_FILE, CSV_HEADER, "utf8");
   }
+  // Ensure file is readable/writable by the container user in production.
+  try {
+    fs.chmodSync(CSV_FILE, 0o666);
+  } catch (err) {
+    logger.warn("csv_chmod_failed", { error: err.message });
+  }
 }
 
 function logLead({ phone, wa_id, product, productLabel, messageId }) {
