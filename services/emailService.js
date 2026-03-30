@@ -36,6 +36,9 @@ function getTransporter() {
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_SECURE,
+    // Add connection timeout to fail faster if SMTP relay is unreachable
+    connectionTimeout: 10000,
+    socketTimeout: 10000,
   };
 
   // Support IP-whitelisted relays that do not require SMTP AUTH.
@@ -47,6 +50,16 @@ function getTransporter() {
   }
 
   _transporter = nodemailer.createTransport(transportConfig);
+  
+  logger.info("email_transporter_created", {
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    authEnabled: !!(SMTP_USER && SMTP_PASS),
+    from: EMAIL_FROM,
+    to: EMAIL_TO,
+  });
+
   return _transporter;
 }
 
