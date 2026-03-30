@@ -1,0 +1,24 @@
+services:
+  wa-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: wa-app
+    ports:
+      - "127.0.0.1:3110:3000"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./data/leads.csv:/app/leads.csv:rw
+    networks:
+      - finxPortal
+
+networks:
+  finxPortal:
+    external: true

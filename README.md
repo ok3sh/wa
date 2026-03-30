@@ -60,6 +60,42 @@ docker compose -f docker.yml down
 
 The container mounts `leads.csv` as a volume so lead data persists across restarts.
 
+## Production Docker (Company Server)
+
+This repository keeps production Docker config separate from local config:
+
+- Local: `docker.yml` + `Dockerfile`
+- Production: `docker-compose.prod.yml` + `Dockerfile.prod`
+
+### Prerequisites on server
+
+1. Ensure Docker network exists:
+
+```bash
+docker network create finxPortal
+```
+
+2. Create required host paths:
+
+```bash
+mkdir -p data logs
+touch data/leads.csv
+```
+
+3. Ensure `data/leads.csv` is writable by container user `1001`.
+
+### Start production stack
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+### Stop production stack
+
+```bash
+docker compose -f docker-compose.prod.yml down
+```
+
 ## Routes
 
 - `GET /` health text
