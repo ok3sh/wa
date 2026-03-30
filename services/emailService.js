@@ -39,11 +39,19 @@ function getTransporter() {
     // Add connection timeout to fail faster if SMTP relay is unreachable
     connectionTimeout: 10000,
     socketTimeout: 10000,
-    // If relay has TLS issues, allow unsigned/self-signed certs
-    tls: {
-      rejectUnauthorized: false,
-    },
   };
+
+  // For port 25 (plain SMTP), disable STARTTLS attempts
+  if (SMTP_PORT === 25) {
+    transportConfig.requireTLS = false;
+  }
+
+  // If using TLS and relay has cert issues, allow unsigned/self-signed certs
+  if (SMTP_SECURE || SMTP_PORT === 587) {
+    transportConfig.tls = {
+      rejectUnauthorized: false,
+    };
+  }
 
   // Support IP-whitelisted relays that do not require SMTP AUTH.
   if (SMTP_USER && SMTP_PASS) {
