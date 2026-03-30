@@ -190,58 +190,36 @@ async function sendWebviewLink(to, productLabel, productKey) {
   const copy = {
     HL: {
       emoji: "🏠",
-      headline: "Home Loan - Let's get you started!",
-      body: "Take the first step toward your dream home. Our team will guide you from eligibility to approval.",
+      headline: "Home Loan",
+      message: "Thanks for your interest in a Home Loan! Our team will reach out to you shortly with personalized options. We look forward to helping you achieve your dream home.",
     },
     PL: {
       emoji: "💳",
-      headline: "Personal Loan - Quick & Easy!",
-      body: "Need funds for a personal goal? We will help you with fast and seamless processing.",
+      headline: "Personal Loan",
+      message: "Thanks for your interest in a Personal Loan! Our team will reach out to you shortly with the best offers tailored to your needs.",
     },
     LAP: {
       emoji: "🏢",
-      headline: "Loan Against Property - Unlock value",
-      body: "Leverage your property to access funding with competitive options and expert guidance.",
+      headline: "Loan Against Property",
+      message: "Thanks for your interest in a Loan Against Property! Our team will reach out to you shortly to discuss the best options for you.",
     },
     INVESTMENTS: {
       emoji: "📈",
-      headline: "Investments - Build your future",
-      body: "Discover curated investment opportunities aligned with your financial goals.",
+      headline: "Investments",
+      message: "Thanks for your interest in Investment opportunities! Our team will reach out to you shortly with curated options aligned with your financial goals.",
     },
   };
 
   const label = productLabel || PRODUCT_MAP[productKey] || productKey;
   const content = copy[productKey] || {
     emoji: "✨",
-    headline: `${label} - Let's get started!`,
-    body: "Our team is ready to help you take the next step.",
+    headline: label,
+    message: "Thanks for your interest! Our team will reach out to you shortly to help you get started.",
   };
 
-  const bodyText =
-    `${content.emoji} *${content.headline}*\n\n` +
-    `${content.body}\n\n` +
-    "Tap the button below to continue.";
+  const bodyText = `${content.emoji} *${content.headline}*\n\n${content.message}`;
 
-  const header = IMAGE_URL ? { type: "image", image: { link: IMAGE_URL } } : undefined;
-
-  const interactive = {
-    type: "cta_url",
-    ...(header && { header }),
-    body: { text: bodyText },
-    footer: { text: "Finfinity Financial Services" },
-    action: {
-      name: "cta_url",
-      parameters: {
-        display_text: "Apply Now ->",
-        url: WEBVIEW_LINK,
-      },
-    },
-  };
-
-  await waPost(to, {
-    type: "interactive",
-    interactive,
-  });
+  await waPost(to, { type: "text", text: { body: bodyText } });
 
   logger.info("cta_message_sent", { to, productLabel: label, productKey });
 }
