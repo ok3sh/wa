@@ -45,6 +45,16 @@ const PARTNER_LABEL = {
 
 const PARTNER_IDS = Object.keys(PARTNER_LABEL);
 
+function trackFlowEntry({ phone, waId, messageId, flowKey, flowLabel }) {
+  logLead({
+    phone,
+    wa_id: waId,
+    product: flowKey,
+    productLabel: flowLabel,
+    messageId,
+  });
+}
+
 // Verify webhook origin when APP_SECRET is configured; stays permissive for legacy setups.
 function verifyMetaSignature(req) {
   if (!APP_SECRET) return true;
@@ -124,6 +134,14 @@ async function processMessage({ value, message, requestId }) {
 
     if (session?.state === "AWAITING_GRIEVANCE") {
       clearSession(from);
+      trackFlowEntry({
+        phone: from,
+        waId: wa_id,
+        messageId,
+        flowKey: "GRIEVANCE_SUBMITTED",
+        flowLabel: "Grievance Submitted",
+      });
+
       await sendThankYouGeneric(
         from,
         "Thank you for raising your grievance.\n\nWe've noted your concern and our team will get back to you within 24-48 hours. We're here to help."
@@ -142,6 +160,14 @@ async function processMessage({ value, message, requestId }) {
 
     // Any regular text returns the user to the top-level menu.
     const isGreeting = textLower === "hi" || textLower === "hello";
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: isGreeting ? "MAIN_MENU_GREETING" : "MAIN_MENU_TEXT",
+      flowLabel: isGreeting ? "Greeting / Main Menu" : "Free Text / Main Menu",
+    });
+
     await sendMainMenu(from, isGreeting);
 
     await notifyNewEntryEmail({
@@ -165,6 +191,14 @@ async function processMessage({ value, message, requestId }) {
   if (!buttonId) return;
 
   if (buttonId === "MAIN_LOANS") {
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: "MAIN_LOANS",
+      flowLabel: "Apply for a Loan - Menu Opened",
+    });
+
     await sendLoanSubMenu(from);
     await notifyNewEntryEmail({
       phone: from,
@@ -179,6 +213,14 @@ async function processMessage({ value, message, requestId }) {
   }
 
   if (buttonId === "MAIN_PARTNER") {
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: "MAIN_PARTNER",
+      flowLabel: "Partner with Us - Menu Opened",
+    });
+
     await sendPartnerSubMenu(from);
     await notifyNewEntryEmail({
       phone: from,
@@ -193,6 +235,14 @@ async function processMessage({ value, message, requestId }) {
   }
 
   if (buttonId === "MAIN_CONTACT") {
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: "MAIN_CONTACT",
+      flowLabel: "Contact Us - Menu Opened",
+    });
+
     await sendContactSubMenu(from);
     await notifyNewEntryEmail({
       phone: from,
@@ -229,6 +279,14 @@ async function processMessage({ value, message, requestId }) {
   }
 
   if (PARTNER_IDS.includes(buttonId)) {
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: buttonId,
+      flowLabel: `Partner with Us - ${PARTNER_LABEL[buttonId]}`,
+    });
+
     await sendThankYouGeneric(
       from,
       "Thank you for your interest in partnering with Finfinity.\n\nOur partnerships team will review your request and get back to you within 2-3 business days."
@@ -247,6 +305,14 @@ async function processMessage({ value, message, requestId }) {
   }
 
   if (buttonId === "CONTACT_RM") {
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: "CONTACT_RM",
+      flowLabel: "Contact Us - Speak to RM",
+    });
+
     await sendThankYouGeneric(
       from,
       "Thank you for reaching out.\n\nYour request has been noted. A Relationship Manager from Finfinity will get in touch with you shortly."
@@ -265,6 +331,14 @@ async function processMessage({ value, message, requestId }) {
   }
 
   if (buttonId === "CONTACT_FAQ") {
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: "CONTACT_FAQ",
+      flowLabel: "Contact Us - FAQs",
+    });
+
     await sendFAQs(from);
     await notifyNewEntryEmail({
       phone: from,
@@ -279,6 +353,14 @@ async function processMessage({ value, message, requestId }) {
   }
 
   if (buttonId === "CONTACT_GRIEVANCE") {
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: "CONTACT_GRIEVANCE",
+      flowLabel: "Contact Us - Grievance Started",
+    });
+
     setAwaitingGrievance(from);
     await sendThankYouGeneric(
       from,
@@ -298,6 +380,14 @@ async function processMessage({ value, message, requestId }) {
   }
 
   if (buttonId === "BACK_MENU") {
+    trackFlowEntry({
+      phone: from,
+      waId: wa_id,
+      messageId,
+      flowKey: "BACK_MENU",
+      flowLabel: "Back to Main Menu",
+    });
+
     await sendMainMenu(from, false);
     await notifyNewEntryEmail({
       phone: from,

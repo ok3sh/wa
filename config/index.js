@@ -2,14 +2,16 @@ const path = require("path");
 const { warn } = require("../utils/logger");
 const { validateRequiredEnv, getEnvWarnings } = require("../validators/envValidator");
 
-const PORT = process.env.PORT || 3000;
-const VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN || "finfinity_verify_token";
-const TOKEN = process.env.TOKEN;
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-const APP_SECRET = process.env.APP_SECRET;
+const env = (name) => process.env[name]?.trim();
 
-const WEBVIEW_LINK = process.env.WEBVIEW_LINK || "https://frm.finfinity.co.in/?utm_campaign=RITEN";
-const IMAGE_URL = process.env.IMAGE_URL;
+const PORT = process.env.PORT || 3000;
+const VERIFY_TOKEN = env("WA_VERIFY_TOKEN") || "finfinity_verify_token";
+const TOKEN = env("TOKEN");
+const PHONE_NUMBER_ID = env("PHONE_NUMBER_ID");
+const APP_SECRET = env("APP_SECRET");
+
+const WEBVIEW_LINK = env("WEBVIEW_LINK") || "https://frm.finfinity.co.in/?utm_campaign=RITEN";
+const IMAGE_URL = env("IMAGE_URL");
 
 const CSV_FILE = path.join(process.cwd(), "leads.csv");
 const LOGO_FILE = path.join(process.cwd(), "fin_logo.jpg");
@@ -30,7 +32,7 @@ function validateEnv() {
   }
 
   const warnings = getEnvWarnings({
-    WA_VERIFY_TOKEN: process.env.WA_VERIFY_TOKEN,
+    WA_VERIFY_TOKEN: env("WA_VERIFY_TOKEN"),
     APP_SECRET,
   });
 

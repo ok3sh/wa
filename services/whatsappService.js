@@ -70,9 +70,9 @@ async function sendMainMenu(to, isGreeting = false) {
       body: { text: bodyText },
       action: {
         buttons: [
-          { type: "reply", reply: { id: "MAIN_LOANS", title: "💰 Apply for a Loan" } },
-          { type: "reply", reply: { id: "MAIN_PARTNER", title: "🤝 Partner with Us" } },
-          { type: "reply", reply: { id: "MAIN_CONTACT", title: "📞 Contact Us" } },
+          { type: "reply", reply: { id: "MAIN_LOANS", title: "Apply for Loan" } },
+          { type: "reply", reply: { id: "MAIN_PARTNER", title: "Partner with Us" } },
+          { type: "reply", reply: { id: "MAIN_CONTACT", title: "Contact Us" } },
         ],
       },
     },
@@ -155,9 +155,9 @@ async function sendContactSubMenu(to) {
       body: { text: "We're here to help! 🙌\n\nWhat would you like to do?" },
       action: {
         buttons: [
-          { type: "reply", reply: { id: "CONTACT_RM", title: "🧑‍💼 Speak to an RM" } },
-          { type: "reply", reply: { id: "CONTACT_FAQ", title: "📖 Read FAQs" } },
-          { type: "reply", reply: { id: "CONTACT_GRIEVANCE", title: "📝 Raise a Grievance" } },
+          { type: "reply", reply: { id: "CONTACT_RM", title: "Speak to RM" } },
+          { type: "reply", reply: { id: "CONTACT_FAQ", title: "Read FAQs" } },
+          { type: "reply", reply: { id: "CONTACT_GRIEVANCE", title: "Raise Grievance" } },
         ],
       },
     },
