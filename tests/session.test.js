@@ -53,10 +53,13 @@ test("setAwaitingGrievance creates an AWAITING_GRIEVANCE session", () => {
   assert.ok(typeof session.ts === "number");
 });
 
-test("clearSession removes the session", () => {
+test("clearSession clears the state but keeps the session alive for email flush", () => {
   setAwaitingGrievance("+9199900002");
   clearSession("+9199900002");
-  assert.equal(getSession("+9199900002"), undefined);
+  // Session must still exist so the debounce timer can fire and send the email.
+  const session = getSession("+9199900002");
+  assert.ok(session, "session should still exist after clearSession");
+  assert.equal(session.state, null);
 });
 
 test("clearSession on an unknown phone is a no-op", () => {

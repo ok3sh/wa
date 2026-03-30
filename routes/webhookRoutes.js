@@ -4,13 +4,16 @@ const rateLimit = require("express-rate-limit");
 
 const { VERIFY_TOKEN, PRODUCT_MAP, APP_SECRET } = require("../config");
 const { logLead } = require("../services/leadService");
-const { notifyNewEntryEmail } = require("../services/emailService");
+const { notifySessionEmail } = require("../services/emailService");
 const {
   isDuplicateMessage,
   markMessageSeen,
   getSession,
   setAwaitingGrievance,
   clearSession,
+  addFlowStep,
+  flushNow,
+  registerFlushCallback,
 } = require("../services/sessionService");
 const {
   sendMainMenu,
@@ -26,6 +29,16 @@ const logger = require("../utils/logger");
 
 const router = express.Router();
 
+// When a user's session goes quiet, fire one summary email with everything they did.
+registerFlushCallback(async (phone, session) => {
+  await notifySessionEmail({
+    phone,
+    waId: session.waId,
+    contactName: session.contactName,
+    steps: session.steps,
+  });
+});
+
 // Limit inbound webhook requests to guard against DDoS / runaway replays.
 const webhookLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -35,7 +48,7 @@ const webhookLimiter = rateLimit({
   message: { ok: false, error: "Too many requests" },
 });
 
-// Module-level constant — avoids re-creating the same object on every request.
+// Module-level constants — avoids re-creating the same objects on every request.
 const PARTNER_LABEL = {
   PARTNER_CORP: "Corporate Partnership",
   PARTNER_DEV: "Developer Partner",
@@ -44,16 +57,6 @@ const PARTNER_LABEL = {
 };
 
 const PARTNER_IDS = Object.keys(PARTNER_LABEL);
-
-function trackFlowEntry({ phone, waId, messageId, flowKey, flowLabel }) {
-  logLead({
-    phone,
-    wa_id: waId,
-    product: flowKey,
-    productLabel: flowLabel,
-    messageId,
-  });
-}
 
 // Verify webhook origin when APP_SECRET is configured; stays permissive for legacy setups.
 function verifyMetaSignature(req) {
@@ -127,6 +130,9 @@ async function processMessage({ value, message, requestId }) {
   }
   markMessageSeen(messageId);
 
+  // Shared context passed into every addFlowStep call.
+  const ctx = { contactName, waId: wa_id };
+
   if (message.type === "text") {
     const text = message.text?.body?.trim() || "";
     const textLower = text.toLowerCase();
@@ -134,50 +140,26 @@ async function processMessage({ value, message, requestId }) {
 
     if (session?.state === "AWAITING_GRIEVANCE") {
       clearSession(from);
-      trackFlowEntry({
-        phone: from,
-        waId: wa_id,
-        messageId,
-        flowKey: "GRIEVANCE_SUBMITTED",
-        flowLabel: "Grievance Submitted",
-      });
+
+      logLead({ phone: from, wa_id, product: "GRIEVANCE_SUBMITTED", productLabel: "Grievance Submitted", messageId });
+      addFlowStep(from, { ...ctx, flow: "Grievance Submitted", userMessage: text });
+      flushNow(from); // terminal — send email immediately
 
       await sendThankYouGeneric(
         from,
         "Thank you for raising your grievance.\n\nWe've noted your concern and our team will get back to you within 24-48 hours. We're here to help."
       );
-
-      await notifyNewEntryEmail({
-        phone: from,
-        waId: wa_id,
-        contactName,
-        messageId,
-        flow: "Grievance Submitted",
-        userMessage: text,
-      });
       return;
     }
 
     // Any regular text returns the user to the top-level menu.
     const isGreeting = textLower === "hi" || textLower === "hello";
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: isGreeting ? "MAIN_MENU_GREETING" : "MAIN_MENU_TEXT",
-      flowLabel: isGreeting ? "Greeting / Main Menu" : "Free Text / Main Menu",
-    });
+    const flow = isGreeting ? "Greeting / Main Menu" : "Free Text / Main Menu";
+
+    logLead({ phone: from, wa_id, product: isGreeting ? "MAIN_MENU_GREETING" : "MAIN_MENU_TEXT", productLabel: flow, messageId });
+    addFlowStep(from, { ...ctx, flow, userMessage: text });
 
     await sendMainMenu(from, isGreeting);
-
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: isGreeting ? "Greeting / Main Menu" : "Free Text / Main Menu",
-      userMessage: text,
-    });
     return;
   }
 
@@ -191,213 +173,78 @@ async function processMessage({ value, message, requestId }) {
   if (!buttonId) return;
 
   if (buttonId === "MAIN_LOANS") {
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: "MAIN_LOANS",
-      flowLabel: "Apply for a Loan - Menu Opened",
-    });
-
+    logLead({ phone: from, wa_id, product: "MAIN_LOANS", productLabel: "Apply for a Loan - Menu Opened", messageId });
+    addFlowStep(from, { ...ctx, flow: "Apply for a Loan - Menu Opened", selectionId: buttonId, selectionLabel: "Apply for a Loan" });
     await sendLoanSubMenu(from);
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Apply for a Loan - Menu Opened",
-      selectionId: buttonId,
-      selectionLabel: "Apply for a Loan",
-    });
     return;
   }
 
   if (buttonId === "MAIN_PARTNER") {
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: "MAIN_PARTNER",
-      flowLabel: "Partner with Us - Menu Opened",
-    });
-
+    logLead({ phone: from, wa_id, product: "MAIN_PARTNER", productLabel: "Partner with Us - Menu Opened", messageId });
+    addFlowStep(from, { ...ctx, flow: "Partner with Us - Menu Opened", selectionId: buttonId, selectionLabel: "Partner with Us" });
     await sendPartnerSubMenu(from);
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Partner with Us - Menu Opened",
-      selectionId: buttonId,
-      selectionLabel: "Partner with Us",
-    });
     return;
   }
 
   if (buttonId === "MAIN_CONTACT") {
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: "MAIN_CONTACT",
-      flowLabel: "Contact Us - Menu Opened",
-    });
-
+    logLead({ phone: from, wa_id, product: "MAIN_CONTACT", productLabel: "Contact Us - Menu Opened", messageId });
+    addFlowStep(from, { ...ctx, flow: "Contact Us - Menu Opened", selectionId: buttonId, selectionLabel: "Contact Us" });
     await sendContactSubMenu(from);
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Contact Us - Menu Opened",
-      selectionId: buttonId,
-      selectionLabel: "Contact Us",
-    });
     return;
   }
 
   if (PRODUCT_MAP[buttonId]) {
-    logLead({
-      phone: from,
-      wa_id,
-      product: buttonId,
-      productLabel: PRODUCT_MAP[buttonId],
-      messageId,
-    });
-
+    logLead({ phone: from, wa_id, product: buttonId, productLabel: PRODUCT_MAP[buttonId], messageId });
+    addFlowStep(from, { ...ctx, flow: "Apply for a Loan - Product Selected", selectionId: buttonId, selectionLabel: PRODUCT_MAP[buttonId] });
+    flushNow(from); // terminal — user reached a product, send email immediately
     await sendWebviewLink(from, PRODUCT_MAP[buttonId], buttonId);
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Apply for a Loan - Product Selected",
-      selectionId: buttonId,
-      selectionLabel: PRODUCT_MAP[buttonId],
-    });
     return;
   }
 
   if (PARTNER_IDS.includes(buttonId)) {
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: buttonId,
-      flowLabel: `Partner with Us - ${PARTNER_LABEL[buttonId]}`,
-    });
-
+    logLead({ phone: from, wa_id, product: buttonId, productLabel: PARTNER_LABEL[buttonId], messageId });
+    addFlowStep(from, { ...ctx, flow: "Partner with Us - Selection", selectionId: buttonId, selectionLabel: PARTNER_LABEL[buttonId] });
+    flushNow(from); // terminal — partner type selected, send email immediately
     await sendThankYouGeneric(
       from,
       "Thank you for your interest in partnering with Finfinity.\n\nOur partnerships team will review your request and get back to you within 2-3 business days."
     );
-
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Partner with Us - Selection",
-      selectionId: buttonId,
-      selectionLabel: PARTNER_LABEL[buttonId],
-    });
     return;
   }
 
   if (buttonId === "CONTACT_RM") {
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: "CONTACT_RM",
-      flowLabel: "Contact Us - Speak to RM",
-    });
-
+    logLead({ phone: from, wa_id, product: "CONTACT_RM", productLabel: "Speak to an RM", messageId });
+    addFlowStep(from, { ...ctx, flow: "Contact Us - Speak to RM", selectionId: buttonId, selectionLabel: "Speak to an RM" });
+    flushNow(from); // terminal — RM requested, send email immediately
     await sendThankYouGeneric(
       from,
       "Thank you for reaching out.\n\nYour request has been noted. A Relationship Manager from Finfinity will get in touch with you shortly."
     );
-
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Contact Us - Speak to RM",
-      selectionId: buttonId,
-      selectionLabel: "Speak to an RM",
-    });
     return;
   }
 
   if (buttonId === "CONTACT_FAQ") {
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: "CONTACT_FAQ",
-      flowLabel: "Contact Us - FAQs",
-    });
-
+    logLead({ phone: from, wa_id, product: "CONTACT_FAQ", productLabel: "Read FAQs", messageId });
+    addFlowStep(from, { ...ctx, flow: "Contact Us - FAQs", selectionId: buttonId, selectionLabel: "Read FAQs" });
     await sendFAQs(from);
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Contact Us - FAQs",
-      selectionId: buttonId,
-      selectionLabel: "Read FAQs",
-    });
     return;
   }
 
   if (buttonId === "CONTACT_GRIEVANCE") {
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: "CONTACT_GRIEVANCE",
-      flowLabel: "Contact Us - Grievance Started",
-    });
-
+    logLead({ phone: from, wa_id, product: "CONTACT_GRIEVANCE", productLabel: "Grievance Started", messageId });
+    addFlowStep(from, { ...ctx, flow: "Contact Us - Grievance Started", selectionId: buttonId, selectionLabel: "Raise a Grievance" });
     setAwaitingGrievance(from);
     await sendThankYouGeneric(
       from,
       "Please type your grievance below and we'll make sure it reaches the right team."
     );
-
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Contact Us - Grievance Started",
-      selectionId: buttonId,
-      selectionLabel: "Raise a Grievance",
-    });
     return;
   }
 
   if (buttonId === "BACK_MENU") {
-    trackFlowEntry({
-      phone: from,
-      waId: wa_id,
-      messageId,
-      flowKey: "BACK_MENU",
-      flowLabel: "Back to Main Menu",
-    });
-
+    logLead({ phone: from, wa_id, product: "BACK_MENU", productLabel: "Back to Main Menu", messageId });
+    addFlowStep(from, { ...ctx, flow: "Back to Main Menu", selectionId: buttonId, selectionLabel: "Back" });
     await sendMainMenu(from, false);
-    await notifyNewEntryEmail({
-      phone: from,
-      waId: wa_id,
-      contactName,
-      messageId,
-      flow: "Back to Main Menu",
-      selectionId: buttonId,
-      selectionLabel: "Back",
-    });
   }
 }
 
