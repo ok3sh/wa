@@ -138,9 +138,10 @@
       border-radius: 20px;
     }
 
-    .pill.edu { background: rgba(79,142,247,.15); color: #7eb3ff; }
-    .pill.home { background: rgba(52,211,153,.15); color: #5be4ac; }
-    .pill.pers { background: rgba(167,139,250,.15); color: #c4b0ff; }
+    .pill.hl { background: rgba(52,211,153,.15); color: #5be4ac; }
+    .pill.pl { background: rgba(79,142,247,.15); color: #7eb3ff; }
+    .pill.lap { background: rgba(167,139,250,.15); color: #c4b0ff; }
+    .pill.investments { background: rgba(251,146,60,.15); color: #fdba74; }
     .pill.unknown { background: rgba(107,128,168,.15); color: var(--muted); }
 
     .ts { color: var(--muted); font-size: 12px; }
@@ -196,12 +197,12 @@
   <div class="charts-grid">
     <div class="chart-card">
       <div class="chart-title">Product Interest Split</div>
-      <div class="chart-sub">Which loan type users enquired about</div>
+      <div class="chart-sub">HL, PL, LAP, and Investments interest split</div>
       <canvas id="chartProduct"></canvas>
     </div>
     <div class="chart-card">
       <div class="chart-title">New vs Returning Users</div>
-      <div class="chart-sub">Users with single vs multiple enquiries</div>
+      <div class="chart-sub">Users with first-time vs repeat interactions</div>
       <canvas id="chartRepeat"></canvas>
     </div>
     <div class="chart-card full">
@@ -251,9 +252,10 @@
   function pillClass(product) {
     if (!product) return 'unknown';
     const p = product.toUpperCase();
-    if (p.includes('EDU')) return 'edu';
-    if (p.includes('HOME')) return 'home';
-    if (p.includes('PERS')) return 'pers';
+    if (p === 'HL' || p.includes('HOME')) return 'hl';
+    if (p === 'PL' || p.includes('PERSONAL')) return 'pl';
+    if (p === 'LAP' || p.includes('PROPERTY')) return 'lap';
+    if (p.includes('INVEST')) return 'investments';
     return 'unknown';
   }
 
@@ -278,8 +280,8 @@
         labels,
         datasets: [{
           data: values,
-          backgroundColor: ['#4f8ef7cc','#34d399cc','#a78bfa99'],
-          borderColor: ['#4f8ef7','#34d399','#a78bfa'],
+          backgroundColor: ['#34d399cc','#4f8ef7cc','#a78bfa99','#fb923ccc','#64748bcc'],
+          borderColor: ['#34d399','#4f8ef7','#a78bfa','#fb923c','#64748b'],
           borderWidth: 2,
           hoverOffset: 6,
         }],
@@ -400,8 +402,8 @@
       const entries = Object.entries(data.byProduct || {}).sort((a, b) => b[1] - a[1]);
       const topEntry = entries.find((e) => e[1] > 0) || entries[0];
       if (topEntry) {
-        document.getElementById('kpiTopShort').textContent = topEntry[0].replace(' Loan', '');
-        document.getElementById('kpiTopLabel').textContent = `${topEntry[1]} leads - Top Product`;
+        document.getElementById('kpiTopShort').textContent = topEntry[0];
+        document.getElementById('kpiTopLabel').textContent = `${topEntry[1]} entries - Top Category`;
       }
 
       document.getElementById('kpiUpdated').textContent = toIST(data.updatedAt);

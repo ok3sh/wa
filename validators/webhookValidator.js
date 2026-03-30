@@ -1,19 +1,27 @@
-function extractWebhookMessage(body) {
-  const entry = body?.entry?.[0];
-  const change = entry?.changes?.[0];
-  const value = change?.value;
-  const message = value?.messages?.[0];
+/**
+ * Extracts every message from a Meta webhook payload.
+ * Meta CAN batch multiple entries and multiple messages per change, so
+ * returning only entry[0]/messages[0] silently drops the rest.
+ *
+ * @returns {{ value: object, message: object }[]}
+ */
+function extractWebhookMessages(body) {
+  const results = [];
 
-  if (!message || !message.from) {
-    return null;
+  for (const entry of body?.entry ?? []) {
+    for (const change of entry?.changes ?? []) {
+      const value = change?.value;
+      for (const message of value?.messages ?? []) {
+        if (message?.from) {
+          results.push({ value, message });
+        }
+      }
+    }
   }
 
-  return {
-    value,
-    message,
-  };
+  return results;
 }
 
 module.exports = {
-  extractWebhookMessage,
+  extractWebhookMessages,
 };

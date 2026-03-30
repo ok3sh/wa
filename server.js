@@ -6,7 +6,7 @@ const { PORT, validateEnv } = require("./config");
 const { ensureCsvFile } = require("./services/leadService");
 const { startCleanupJobs } = require("./services/sessionService");
 const requestContext = require("./middleware/requestContext");
-const { requestLogger } = require("./utils/logger");
+const { requestLogger, info, error: logError } = require("./utils/logger");
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
 const webhookRoutes = require("./routes/webhookRoutes");
 const systemRoutes = require("./routes/systemRoutes");
@@ -36,7 +36,32 @@ app.use(webhookRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
+  info("server_started", { port: PORT });
   console.log(`Webhook server running on http://localhost:${PORT}`);
   console.log("Dashboard available at /dashboard");
 });
+
+server.on("error", (err) => {
+  logError("server_listen_error", { error: err.message, code: err.code });
+  process.exit(1);
+});
+
+// Graceful shutdown — finish in-flight requests before exiting so that
+// leads aren't dropped mid-write during rolling deploys or container stops.
+function shutdown(signal) {
+  info("shutdown_initiated", { signal });
+  server.close(() => {
+    info("server_closed");
+    process.exit(0);
+  });
+
+  // Hard kill after 10 s if connections haven't drained.
+  setTimeout(() => {
+    logError("shutdown_timeout", { signal });
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

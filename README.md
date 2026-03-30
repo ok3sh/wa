@@ -16,6 +16,13 @@ Create a `.env` file with:
 - `WA_TIMEOUT_MS=10000` (optional)
 - `WA_RETRY_COUNT=2` (optional)
 - `WA_RETRY_BASE_MS=400` (optional)
+- `SMTP_HOST=<smtp_host>` (optional, required for email notifications)
+- `SMTP_PORT=587` (optional)
+- `SMTP_SECURE=false` (optional; true for SSL SMTP)
+- `SMTP_USER=<smtp_username>` (optional; required only if your SMTP relay requires auth)
+- `SMTP_PASS=<smtp_password>` (optional; required only if your SMTP relay requires auth)
+- `EMAIL_FROM=<from_email_address>` (optional)
+- `EMAIL_TO=connect@finfinity.co.in` (optional; defaults to this address)
 
 ## Run Locally
 

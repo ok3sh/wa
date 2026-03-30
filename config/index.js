@@ -15,9 +15,10 @@ const CSV_FILE = path.join(process.cwd(), "leads.csv");
 const LOGO_FILE = path.join(process.cwd(), "fin_logo.jpg");
 
 const PRODUCT_MAP = {
-  EDU_LOAN: "Education Loan",
-  PERSONAL_LOAN: "Personal Loan",
-  HOME_LOAN: "Home Loan",
+  HL: "Home Loan",
+  PL: "Personal Loan",
+  LAP: "Loan Against Property",
+  INVESTMENTS: "Investments",
 };
 
 function validateEnv() {

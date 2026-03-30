@@ -1,6 +1,7 @@
 const fs = require("fs");
 
 const { CSV_FILE, PRODUCT_MAP } = require("../config");
+const logger = require("../utils/logger");
 
 const CSV_HEADER = "timestamp,phone_number,wa_id,product,product_label,message_id\n";
 
@@ -28,17 +29,17 @@ function logLead({ phone, wa_id, product, productLabel, messageId }) {
 
   fs.appendFile(CSV_FILE, row, (err) => {
     if (err) {
-      console.error("CSV write error:", err);
+      logger.error("csv_write_error", { error: err.message, phone, product });
       return;
     }
-    console.log("Lead logged:", phone, product);
+    logger.info("lead_logged", { phone, product });
   });
 }
 
-function readLeadsFromCsv() {
+async function readLeadsFromCsv() {
   if (!fs.existsSync(CSV_FILE)) return [];
 
-  const raw = fs.readFileSync(CSV_FILE, "utf8").trim();
+  const raw = (await fs.promises.readFile(CSV_FILE, "utf8")).trim();
   if (!raw) return [];
 
   const lines = raw.split("\n");
@@ -154,6 +155,7 @@ function computeAnalytics(leads) {
   };
 }
 
+// Note: readLeadsFromCsv is async — callers must await it.
 module.exports = {
   ensureCsvFile,
   logLead,

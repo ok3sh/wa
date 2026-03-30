@@ -3,6 +3,7 @@ const path = require("path");
 
 const { LOGO_FILE } = require("../config");
 const { readLeadsFromCsv, computeAnalytics } = require("../services/leadService");
+const adminAuth = require("../middleware/adminAuth");
 
 const router = express.Router();
 
@@ -17,22 +18,22 @@ router.get("/logo", (req, res) => {
   res.sendFile(LOGO_FILE);
 });
 
-router.get("/analytics", (req, res) => {
-  const leads = readLeadsFromCsv();
+router.get("/analytics", adminAuth, async (req, res) => {
+  const leads = await readLeadsFromCsv();
   const analytics = computeAnalytics(leads);
   res.json(analytics);
 });
 
-router.get("/api/leads/recent", (req, res) => {
+router.get("/api/leads/recent", adminAuth, async (req, res) => {
   const limitRaw = Number(req.query.limit || 50);
   const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(limitRaw, 500)) : 50;
 
-  const leads = readLeadsFromCsv();
-  const recent = leads.reverse().slice(0, limit);
+  const leads = await readLeadsFromCsv();
+  const recent = leads.slice().reverse().slice(0, limit);
   res.json(recent);
 });
 
-router.get("/dashboard", (req, res) => {
+router.get("/dashboard", adminAuth, (req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "dashboard.html"));
 });
 

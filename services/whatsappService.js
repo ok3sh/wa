@@ -3,11 +3,13 @@ const axios = require("axios");
 const {
   TOKEN,
   PHONE_NUMBER_ID,
+  PRODUCT_MAP,
   WEBVIEW_LINK,
   IMAGE_URL,
 } = require("../config");
 const logger = require("../utils/logger");
 
+const WA_API_VERSION = process.env.WA_API_VERSION || "v21.0";
 const WA_TIMEOUT_MS = Number(process.env.WA_TIMEOUT_MS || 10000);
 const WA_RETRY_COUNT = Number(process.env.WA_RETRY_COUNT || 2);
 const WA_RETRY_BASE_MS = Number(process.env.WA_RETRY_BASE_MS || 400);
@@ -24,7 +26,7 @@ function shouldRetry(err) {
 
 // Shared WhatsApp Graph API sender with timeout and bounded retry/backoff.
 async function waPost(to, payload) {
-  const url = `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`;
+  const url = `https://graph.facebook.com/${WA_API_VERSION}/${PHONE_NUMBER_ID}/messages`;
 
   for (let attempt = 0; attempt <= WA_RETRY_COUNT; attempt++) {
     try {
@@ -68,7 +70,7 @@ async function sendMainMenu(to, isGreeting = false) {
       body: { text: bodyText },
       action: {
         buttons: [
-          // { type: "reply", reply: { id: "MAIN_LOANS", title: "💰 Apply for a Loan" } }, // TEMPORARILY DISABLED
+          { type: "reply", reply: { id: "MAIN_LOANS", title: "💰 Apply for a Loan" } },
           { type: "reply", reply: { id: "MAIN_PARTNER", title: "🤝 Partner with Us" } },
           { type: "reply", reply: { id: "MAIN_CONTACT", title: "📞 Contact Us" } },
         ],
@@ -77,25 +79,31 @@ async function sendMainMenu(to, isGreeting = false) {
   });
 }
 
-// TEMPORARILY DISABLED — Apply for a Loan flow
-// async function sendLoanSubMenu(to) {
-//   await waPost(to, {
-//     type: "interactive",
-//     interactive: {
-//       type: "button",
-//       body: {
-//         text: "Great! 💼 Which type of loan are you interested in?\n\nChoose one below and we'll take you to the application:",
-//       },
-//       action: {
-//         buttons: [
-//           { type: "reply", reply: { id: "EDU_LOAN", title: "🎓 Education Loan" } },
-//           { type: "reply", reply: { id: "PERSONAL_LOAN", title: "💳 Personal Loan" } },
-//           { type: "reply", reply: { id: "HOME_LOAN", title: "🏠 Home Loan" } },
-//         ],
-//       },
-//     },
-//   });
-// }
+async function sendLoanSubMenu(to) {
+  await waPost(to, {
+    type: "interactive",
+    interactive: {
+      type: "list",
+      body: {
+        text: "Great! 💼 Please choose a category to continue:",
+      },
+      action: {
+        button: "Choose Product",
+        sections: [
+          {
+            title: "Apply for a Loan",
+            rows: [
+              { id: "HL", title: "HL", description: "Home Loan" },
+              { id: "PL", title: "PL", description: "Personal Loan" },
+              { id: "LAP", title: "LAP", description: "Loan Against Property" },
+              { id: "INVESTMENTS", title: "Investments", description: "Explore investment options" },
+            ],
+          },
+        ],
+      },
+    },
+  });
+}
 
 async function sendPartnerSubMenu(to) {
   await waPost(to, {
@@ -178,67 +186,72 @@ async function sendThankYouGeneric(to, message) {
   await waPost(to, { type: "text", text: { body: message } });
 }
 
-// TEMPORARILY DISABLED — Loan product CTA webview link
-// async function sendWebviewLink(to, productLabel, productKey) {
-//   const copy = {
-//     EDU_LOAN: {
-//       emoji: "🎓",
-//       headline: "Education Loan - Let's get you started!",
-//       body: "Invest in your future with the right financial support.\nOur team is here to make your education loan journey smooth and hassle-free.",
-//     },
-//     PERSONAL_LOAN: {
-//       emoji: "💳",
-//       headline: "Personal Loan - Quick & Easy!",
-//       body: "Need funds for any personal goal? We've got you covered.\nFast approvals, minimal paperwork - let's move forward together.",
-//     },
-//     HOME_LOAN: {
-//       emoji: "🏠",
-//       headline: "Home Loan - Your dream home awaits!",
-//       body: "Take the first step towards owning your dream home.\nCompetitive rates, flexible tenure - our experts will guide you through every step.",
-//     },
-//   };
-//
-//   const content = copy[productKey] || {
-//     emoji: "✨",
-//     headline: `${productLabel} - Let's get started!`,
-//     body: "Our team is ready to help you take the next step.",
-//   };
-//
-//   const bodyText =
-//     `${content.emoji} *${content.headline}*\n\n` +
-//     `${content.body}\n\n` +
-//     "Tap the button below to begin your application.";
-//
-//   const header = IMAGE_URL ? { type: "image", image: { link: IMAGE_URL } } : undefined;
-//
-//   const interactive = {
-//     type: "cta_url",
-//     ...(header && { header }),
-//     body: { text: bodyText },
-//     footer: { text: "Finfinity Financial Services" },
-//     action: {
-//       name: "cta_url",
-//       parameters: {
-//         display_text: "Apply Now ->",
-//         url: WEBVIEW_LINK,
-//       },
-//     },
-//   };
-//
-//   await waPost(to, {
-//     type: "interactive",
-//     interactive,
-//   });
-//
-//   logger.info("cta_message_sent", { to, productLabel });
-// }
+async function sendWebviewLink(to, productLabel, productKey) {
+  const copy = {
+    HL: {
+      emoji: "🏠",
+      headline: "Home Loan - Let's get you started!",
+      body: "Take the first step toward your dream home. Our team will guide you from eligibility to approval.",
+    },
+    PL: {
+      emoji: "💳",
+      headline: "Personal Loan - Quick & Easy!",
+      body: "Need funds for a personal goal? We will help you with fast and seamless processing.",
+    },
+    LAP: {
+      emoji: "🏢",
+      headline: "Loan Against Property - Unlock value",
+      body: "Leverage your property to access funding with competitive options and expert guidance.",
+    },
+    INVESTMENTS: {
+      emoji: "📈",
+      headline: "Investments - Build your future",
+      body: "Discover curated investment opportunities aligned with your financial goals.",
+    },
+  };
+
+  const label = productLabel || PRODUCT_MAP[productKey] || productKey;
+  const content = copy[productKey] || {
+    emoji: "✨",
+    headline: `${label} - Let's get started!`,
+    body: "Our team is ready to help you take the next step.",
+  };
+
+  const bodyText =
+    `${content.emoji} *${content.headline}*\n\n` +
+    `${content.body}\n\n` +
+    "Tap the button below to continue.";
+
+  const header = IMAGE_URL ? { type: "image", image: { link: IMAGE_URL } } : undefined;
+
+  const interactive = {
+    type: "cta_url",
+    ...(header && { header }),
+    body: { text: bodyText },
+    footer: { text: "Finfinity Financial Services" },
+    action: {
+      name: "cta_url",
+      parameters: {
+        display_text: "Apply Now ->",
+        url: WEBVIEW_LINK,
+      },
+    },
+  };
+
+  await waPost(to, {
+    type: "interactive",
+    interactive,
+  });
+
+  logger.info("cta_message_sent", { to, productLabel: label, productKey });
+}
 
 module.exports = {
   sendMainMenu,
-  // sendLoanSubMenu,    // TEMPORARILY DISABLED
+  sendLoanSubMenu,
   sendPartnerSubMenu,
   sendContactSubMenu,
   sendFAQs,
   sendThankYouGeneric,
-  // sendWebviewLink,    // TEMPORARILY DISABLED
+  sendWebviewLink,
 };

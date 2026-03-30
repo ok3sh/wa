@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { validateRequiredEnv, getEnvWarnings } = require("../validators/envValidator");
-const { extractWebhookMessage } = require("../validators/webhookValidator");
+const { extractWebhookMessages } = require("../validators/webhookValidator");
 
 test("validateRequiredEnv accepts required keys", () => {
   assert.doesNotThrow(() => {
@@ -22,11 +22,11 @@ test("getEnvWarnings includes WA_VERIFY_TOKEN and APP_SECRET warnings when absen
   assert.equal(warnings.length, 2);
 });
 
-test("extractWebhookMessage returns null for invalid payload", () => {
-  assert.equal(extractWebhookMessage({}), null);
+test("extractWebhookMessages returns empty array for invalid payload", () => {
+  assert.deepEqual(extractWebhookMessages({}), []);
 });
 
-test("extractWebhookMessage returns parsed value for valid payload", () => {
+test("extractWebhookMessages returns parsed entries for a valid payload", () => {
   const payload = {
     entry: [
       {
@@ -42,8 +42,26 @@ test("extractWebhookMessage returns parsed value for valid payload", () => {
     ],
   };
 
-  const extracted = extractWebhookMessage(payload);
-  assert.ok(extracted);
-  assert.equal(extracted.message.id, "m1");
-  assert.equal(extracted.message.from, "91999");
+  const results = extractWebhookMessages(payload);
+  assert.equal(results.length, 1);
+  assert.equal(results[0].message.id, "m1");
+  assert.equal(results[0].message.from, "91999");
+});
+
+test("extractWebhookMessages returns all messages from a batched payload", () => {
+  const makeEntry = (id, from) => ({
+    changes: [
+      {
+        value: {
+          messages: [{ id, from, type: "text", text: { body: "hey" } }],
+        },
+      },
+    ],
+  });
+
+  const payload = { entry: [makeEntry("m1", "111"), makeEntry("m2", "222")] };
+  const results = extractWebhookMessages(payload);
+  assert.equal(results.length, 2);
+  assert.equal(results[0].message.id, "m1");
+  assert.equal(results[1].message.id, "m2");
 });
