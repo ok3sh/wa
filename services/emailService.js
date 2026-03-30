@@ -39,6 +39,10 @@ function getTransporter() {
     // Add connection timeout to fail faster if SMTP relay is unreachable
     connectionTimeout: 10000,
     socketTimeout: 10000,
+    // If relay has TLS issues, allow unsigned/self-signed certs
+    tls: {
+      rejectUnauthorized: false,
+    },
   };
 
   // Support IP-whitelisted relays that do not require SMTP AUTH.
