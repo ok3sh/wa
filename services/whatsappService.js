@@ -4,8 +4,6 @@ const {
   TOKEN,
   PHONE_NUMBER_ID,
   PRODUCT_MAP,
-  WEBVIEW_LINK,
-  IMAGE_URL,
 } = require("../config");
 const logger = require("../utils/logger");
 
