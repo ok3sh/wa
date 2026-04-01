@@ -107,6 +107,7 @@ docker compose -f docker-compose.prod.yml down
 - `POST /webhook` webhook receiver
 - `GET /dashboard` analytics dashboard
 - `GET /analytics` raw analytics json
+- `GET /admin/email/health` admin-only SMTP connectivity check
 
 
 For higher scale next, add:

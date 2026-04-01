@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 
 const { LOGO_FILE } = require("../config");
+const { verifyEmailTransport } = require("../services/emailService");
 const { readLeadsFromCsv, computeAnalytics } = require("../services/leadService");
 const adminAuth = require("../middleware/adminAuth");
 
@@ -31,6 +32,16 @@ router.get("/api/leads/recent", adminAuth, async (req, res) => {
   const leads = await readLeadsFromCsv();
   const recent = leads.slice().reverse().slice(0, limit);
   res.json(recent);
+});
+
+router.get("/admin/email/health", adminAuth, async (req, res) => {
+  const result = await verifyEmailTransport();
+  res.status(result.ok ? 200 : 503).json({
+    ok: result.ok,
+    reason: result.reason,
+    checkedAt: new Date().toISOString(),
+    details: result.details,
+  });
 });
 
 router.get("/dashboard", adminAuth, (req, res) => {

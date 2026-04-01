@@ -276,6 +276,71 @@ async function notifySessionEmail({ phone, waId, contactName, steps = [] }) {
   }
 }
 
+async function verifyEmailTransport() {
+  const configured = isEmailConfigured();
+  const smtpIgnoreTlsConfigured =
+    SMTP_IGNORE_TLS_ENV != null && SMTP_IGNORE_TLS_ENV !== "";
+  const ignoreTLS = SMTP_SECURE
+    ? false
+    : smtpIgnoreTlsConfigured
+      ? String(SMTP_IGNORE_TLS_ENV).toLowerCase() === "true"
+      : SMTP_PORT === 25;
+
+  const details = {
+    configured,
+    host: SMTP_HOST || null,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    ignoreTLS,
+    authEnabled: !!(SMTP_USER && SMTP_PASS),
+    from: EMAIL_FROM,
+    to: EMAIL_TO,
+  };
+
+  if (!configured) {
+    return {
+      ok: false,
+      reason: "SMTP not configured. Set SMTP_HOST and SMTP_PORT.",
+      details,
+    };
+  }
+
+  try {
+    const transporter = getTransporter();
+    await transporter.verify();
+
+    logger.info("email_transport_verified", {
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      ignoreTLS,
+      authEnabled: !!(SMTP_USER && SMTP_PASS),
+    });
+
+    return {
+      ok: true,
+      reason: "SMTP connection verified.",
+      details,
+    };
+  } catch (err) {
+    logger.error("email_transport_verify_failed", {
+      error: err.message,
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      ignoreTLS,
+      authEnabled: !!(SMTP_USER && SMTP_PASS),
+    });
+
+    return {
+      ok: false,
+      reason: err.message,
+      details,
+    };
+  }
+}
+
 module.exports = {
   notifySessionEmail,
+  verifyEmailTransport,
 };
