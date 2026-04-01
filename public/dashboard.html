@@ -120,6 +120,17 @@
       margin-bottom: 28px;
     }
 
+    .error-banner {
+      display: none;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      background: rgba(127, 29, 29, 0.3);
+      color: #fecaca;
+      font-size: 13px;
+    }
+
     .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
     .table-header h3 { font-size: 13px; font-weight: 600; }
     .badge { background: rgba(79,142,247,.15); color: var(--accent); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
@@ -173,6 +184,8 @@
 </header>
 
 <main>
+  <div id="errorBanner" class="error-banner"></div>
+
   <div class="section-title">Overview</div>
   <div class="kpi-grid">
     <div class="kpi-card">
@@ -387,14 +400,27 @@
   }
 
   async function load() {
+    const errorBanner = document.getElementById('errorBanner');
     try {
       const [analyticsRes, recentRes] = await Promise.all([
         fetch('/analytics'),
         fetch('/api/leads/recent?limit=50'),
       ]);
 
+      if (!analyticsRes.ok) {
+        const details = await analyticsRes.text();
+        throw new Error(`Analytics API failed (${analyticsRes.status}): ${details || analyticsRes.statusText}`);
+      }
+      if (!recentRes.ok) {
+        const details = await recentRes.text();
+        throw new Error(`Recent leads API failed (${recentRes.status}): ${details || recentRes.statusText}`);
+      }
+
       const data = await analyticsRes.json();
       const recent = await recentRes.json();
+
+      errorBanner.style.display = 'none';
+      errorBanner.textContent = '';
 
       document.getElementById('kpiTotal').textContent = data.totalLeads;
       document.getElementById('kpiUsers').textContent = data.uniqueUsers;
@@ -415,6 +441,8 @@
       buildTable(recent);
     } catch (e) {
       console.error('Dashboard refresh failed', e);
+      errorBanner.style.display = 'block';
+      errorBanner.textContent = e?.message || 'Dashboard refresh failed. Check server logs.';
     }
   }
 

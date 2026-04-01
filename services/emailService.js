@@ -5,6 +5,7 @@ const logger = require("../utils/logger");
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+const SMTP_IGNORE_TLS_ENV = process.env.SMTP_IGNORE_TLS;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const EMAIL_FROM = process.env.EMAIL_FROM || SMTP_USER || "no-reply@finfinity.co.in";
@@ -40,6 +41,19 @@ function getTransporter() {
     socketTimeout: 10000,
   };
 
+  // Port 25 relays commonly reject STARTTLS in locked-down environments.
+  // Allow explicit override via SMTP_IGNORE_TLS; default to true on port 25.
+  const smtpIgnoreTlsConfigured =
+    SMTP_IGNORE_TLS_ENV != null && SMTP_IGNORE_TLS_ENV !== "";
+  const shouldIgnoreTls = SMTP_SECURE
+    ? false
+    : smtpIgnoreTlsConfigured
+      ? String(SMTP_IGNORE_TLS_ENV).toLowerCase() === "true"
+      : SMTP_PORT === 25;
+  if (shouldIgnoreTls) {
+    transportConfig.ignoreTLS = true;
+  }
+
   if (SMTP_PORT === 25) {
     transportConfig.requireTLS = false;
   }
@@ -58,6 +72,7 @@ function getTransporter() {
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_SECURE,
+    ignoreTLS: !!transportConfig.ignoreTLS,
     authEnabled: !!(SMTP_USER && SMTP_PASS),
     from: EMAIL_FROM,
     to: EMAIL_TO,

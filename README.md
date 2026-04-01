@@ -19,10 +19,13 @@ Create a `.env` file with:
 - `SMTP_HOST=<smtp_host>` (optional, required for email notifications)
 - `SMTP_PORT=587` (optional)
 - `SMTP_SECURE=false` (optional; true for SSL SMTP)
+- `SMTP_IGNORE_TLS=false` (optional; set true for plain SMTP relays on port 25 that do not support STARTTLS)
 - `SMTP_USER=<smtp_username>` (optional; required only if your SMTP relay requires auth)
 - `SMTP_PASS=<smtp_password>` (optional; required only if your SMTP relay requires auth)
 - `EMAIL_FROM=<from_email_address>` (optional)
 - `EMAIL_TO=connect@finfinity.co.in` (optional; defaults to this address)
+- `LOG_TO_FILE=true` (optional; writes JSON logs into `logs/app.log` and `logs/error.log`)
+- `LOG_DIR=/app/logs` (optional; defaults to `<project>/logs`)
 
 ## Run Locally
 
