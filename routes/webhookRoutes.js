@@ -2,7 +2,13 @@ const express = require("express");
 const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 
-const { VERIFY_TOKEN, PRODUCT_MAP, APP_SECRET } = require("../config");
+const {
+  VERIFY_TOKEN,
+  PRODUCT_MAP,
+  APP_SECRET,
+  TESTER_ACCESS_ENABLED,
+  TESTER_ALLOWED_PHONES,
+} = require("../config");
 const { logLead } = require("../services/leadService");
 const { notifySessionEmail } = require("../services/emailService");
 const {
@@ -57,6 +63,15 @@ const PARTNER_LABEL = {
 };
 
 const PARTNER_IDS = Object.keys(PARTNER_LABEL);
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isTesterAllowed(phone) {
+  if (!TESTER_ACCESS_ENABLED) return true;
+  return TESTER_ALLOWED_PHONES.has(normalizePhone(phone));
+}
 
 // Verify webhook origin when APP_SECRET is configured; stays permissive for legacy setups.
 function verifyMetaSignature(req) {
@@ -122,6 +137,15 @@ async function processMessage({ value, message, requestId }) {
   const wa_id = value?.contacts?.[0]?.wa_id || from;
   const contactName = value?.contacts?.[0]?.profile?.name || "";
   const messageId = message.id;
+
+  if (!isTesterAllowed(from)) {
+    logger.info("tester_access_blocked", {
+      requestId,
+      phone: from,
+      messageId,
+    });
+    return;
+  }
 
   // Ignore already-seen message IDs to prevent duplicate user responses.
   if (isDuplicateMessage(messageId)) {

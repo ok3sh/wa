@@ -16,6 +16,8 @@ Create a `.env` file with:
 - `WA_TIMEOUT_MS=10000` (optional)
 - `WA_RETRY_COUNT=2` (optional)
 - `WA_RETRY_BASE_MS=400` (optional)
+- `TESTER_ACCESS_ENABLED=false` (optional; when true, only allowlisted WhatsApp numbers can use the bot)
+- `TESTER_ALLOWED_PHONES=919999999999,918888888888` (optional; comma-separated phone numbers with or without +)
 - `SMTP_HOST=<smtp_host>` (optional, required for email notifications)
 - `SMTP_PORT=587` (optional)
 - `SMTP_SECURE=false` (optional; true for SSL SMTP)

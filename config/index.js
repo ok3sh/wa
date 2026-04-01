@@ -10,6 +10,15 @@ const TOKEN = env("TOKEN");
 const PHONE_NUMBER_ID = env("PHONE_NUMBER_ID");
 const APP_SECRET = env("APP_SECRET");
 
+const TESTER_ACCESS_ENABLED =
+  String(process.env.TESTER_ACCESS_ENABLED || "false").toLowerCase() === "true";
+const TESTER_ALLOWED_PHONES = new Set(
+  String(process.env.TESTER_ALLOWED_PHONES || "")
+    .split(",")
+    .map((v) => v.trim().replace(/\D/g, ""))
+    .filter(Boolean)
+);
+
 const WEBVIEW_LINK = env("WEBVIEW_LINK") || "https://frm.finfinity.co.in/?utm_campaign=RITEN";
 const IMAGE_URL = env("IMAGE_URL");
 
@@ -36,6 +45,12 @@ function validateEnv() {
     APP_SECRET,
   });
 
+  if (TESTER_ACCESS_ENABLED && !TESTER_ALLOWED_PHONES.size) {
+    warnings.push(
+      "TESTER_ACCESS_ENABLED is true but TESTER_ALLOWED_PHONES is empty; all users will be blocked."
+    );
+  }
+
   for (const message of warnings) {
     warn(message);
   }
@@ -47,6 +62,8 @@ module.exports = {
   TOKEN,
   PHONE_NUMBER_ID,
   APP_SECRET,
+  TESTER_ACCESS_ENABLED,
+  TESTER_ALLOWED_PHONES,
   WEBVIEW_LINK,
   IMAGE_URL,
   CSV_FILE,
