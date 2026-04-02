@@ -181,81 +181,95 @@ async function notifySessionEmail({ phone, waId, contactName, steps = [] }) {
       const detailParts = [];
       if (s.selectionLabel) {
         detailParts.push(
-          `<span style="color:#0b2d66;"><strong>→ Selected:</strong> ${escHtml(s.selectionLabel)}</span>`
+          `<div style="margin-top:6px;color:#0f3c8a;"><strong>Selected:</strong> ${escHtml(s.selectionLabel)}</div>`
         );
       }
       if (s.userMessage) {
         detailParts.push(
-          `<span style="color:#444;"><strong>→ Typed:</strong> <em>"${escHtml(s.userMessage)}"</em></span>`
+          `<div style="margin-top:6px;color:#414b5f;"><strong>Typed:</strong> <em>"${escHtml(s.userMessage)}"</em></div>`
         );
       }
-      const detail = detailParts.length
-        ? `<br><span style="display:block;padding-left:8px;margin-top:4px;font-size:12px;">${detailParts.join("<br>")}</span>`
-        : "";
+      const detail = detailParts.join("");
 
-      const rowBg = i % 2 === 0 ? "#ffffff" : "#f8faff";
+      const rowBg = i % 2 === 0 ? "#ffffff" : "#f7f9ff";
       return `
         <tr style="background:${rowBg};">
-          <td style="border:1px solid #e5ebf8;padding:8px 10px;text-align:center;color:#888;font-size:12px;">${i + 1}</td>
-          <td style="border:1px solid #e5ebf8;padding:8px 10px;font-size:12px;color:#555;white-space:nowrap;">${escHtml(toIST(s.ts))}</td>
-          <td style="border:1px solid #e5ebf8;padding:8px 10px;font-size:13px;">${escHtml(s.flow)}${detail}</td>
+          <td style="border:1px solid #dbe5fb;padding:10px 12px;text-align:center;color:#7d8aa8;font-size:12px;font-weight:700;vertical-align:top;">${i + 1}</td>
+          <td style="border:1px solid #dbe5fb;padding:10px 12px;font-size:12px;color:#4a5570;white-space:nowrap;vertical-align:top;">${escHtml(toIST(s.ts))}</td>
+          <td style="border:1px solid #dbe5fb;padding:10px 12px;font-size:13px;color:#1b2740;vertical-align:top;"><div style="font-weight:600;">${escHtml(s.flow)}</div>${detail}</td>
         </tr>`;
     })
     .join("");
 
+  const statCard = (label, value) => `
+    <td style="width:33.33%;padding:6px;vertical-align:top;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;background:#f5f8ff;border:1px solid #dbe5fb;border-radius:10px;">
+        <tr>
+          <td style="padding:10px 12px;">
+            <div style="font-size:11px;color:#687694;text-transform:uppercase;letter-spacing:.04em;">${escHtml(label)}</div>
+            <div style="margin-top:4px;font-size:14px;color:#16253d;font-weight:700;">${escHtml(value)}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  `;
+
   const htmlBody = `
-    <div style="margin:0;padding:20px;background:#f5f8ff;font-family:Arial,sans-serif;color:#172b4d;">
-      <div style="max-width:760px;margin:0 auto;background:#ffffff;border:1px solid #dbe4f6;border-radius:12px;overflow:hidden;">
+    <div style="margin:0;padding:22px;background:#ecf2ff;font-family:Arial,sans-serif;color:#16253d;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:760px;margin:0 auto;border-collapse:collapse;background:#ffffff;border:1px solid #d6e1fa;border-radius:14px;overflow:hidden;">
+        <tr>
+          <td style="padding:18px 22px;background:linear-gradient(90deg,#0b2d66 0%,#1a4ca8 100%);color:#ffffff;">
+            <div style="font-size:12px;opacity:0.9;letter-spacing:.06em;text-transform:uppercase;">Finfinity WhatsApp Bot</div>
+            <div style="margin-top:5px;font-size:20px;font-weight:700;">Session Summary</div>
+            <div style="margin-top:8px;display:inline-block;font-size:12px;font-weight:600;background:rgba(255,255,255,0.14);padding:4px 10px;border-radius:999px;">${escHtml(flowLabel)}</div>
+          </td>
+        </tr>
 
-        <div style="padding:16px 20px;background:#0b2d66;color:#ffffff;">
-          <div style="font-size:18px;font-weight:700;">Finfinity — WhatsApp Session Summary</div>
-          <div style="font-size:12px;opacity:0.85;margin-top:4px;">${escHtml(flowLabel)}</div>
-        </div>
-
-        <div style="padding:18px 20px;">
-
-          <table cellpadding="7" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
-            <tr>
-              <td style="width:140px;border:1px solid #e5ebf8;background:#f8faff;"><strong>Contact Name</strong></td>
-              <td style="border:1px solid #e5ebf8;">${escHtml(name)}</td>
-            </tr>
-            <tr>
-              <td style="border:1px solid #e5ebf8;background:#f8faff;"><strong>Phone</strong></td>
-              <td style="border:1px solid #e5ebf8;">${escHtml(phone || "N/A")}</td>
-            </tr>
-            <tr>
-              <td style="border:1px solid #e5ebf8;background:#f8faff;"><strong>WA ID</strong></td>
-              <td style="border:1px solid #e5ebf8;">${escHtml(waId || "N/A")}</td>
-            </tr>
-            <tr>
-              <td style="border:1px solid #e5ebf8;background:#f8faff;"><strong>Session Start</strong></td>
-              <td style="border:1px solid #e5ebf8;">${escHtml(sessionStart)}</td>
-            </tr>
-            <tr>
-              <td style="border:1px solid #e5ebf8;background:#f8faff;"><strong>Session End</strong></td>
-              <td style="border:1px solid #e5ebf8;">${escHtml(sessionEnd)}</td>
-            </tr>
-          </table>
-
-          <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#0b2d66;">
-            User Journey &nbsp;<span style="font-weight:400;font-size:12px;color:#888;">(${steps.length} step${steps.length !== 1 ? "s" : ""})</span>
-          </div>
-
-          <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-              <tr style="background:#0b2d66;color:#fff;">
-                <th style="border:1px solid #09245a;padding:8px 10px;font-size:12px;width:40px;">#</th>
-                <th style="border:1px solid #09245a;padding:8px 10px;font-size:12px;text-align:left;white-space:nowrap;">Time (IST)</th>
-                <th style="border:1px solid #09245a;padding:8px 10px;font-size:12px;text-align:left;">Action</th>
+        <tr>
+          <td style="padding:16px 16px 4px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+              <tr>
+                ${statCard("Contact", name)}
+                ${statCard("Phone", phone || "N/A")}
+                ${statCard("WA ID", waId || "N/A")}
               </tr>
-            </thead>
-            <tbody>
-              ${stepRows}
-            </tbody>
-          </table>
+            </table>
+          </td>
+        </tr>
 
-        </div>
-      </div>
+        <tr>
+          <td style="padding:4px 16px 8px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+              <tr>
+                ${statCard("Session Start", sessionStart)}
+                ${statCard("Session End", sessionEnd)}
+                ${statCard("Total Steps", String(steps.length))}
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:8px 22px 12px;font-size:14px;font-weight:700;color:#14366f;">User Journey Timeline</td>
+        </tr>
+
+        <tr>
+          <td style="padding:0 22px 22px;">
+            <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;font-size:13px;">
+              <thead>
+                <tr style="background:#153b7f;color:#ffffff;">
+                  <th style="border:1px solid #0f316d;padding:9px 10px;font-size:12px;width:44px;">#</th>
+                  <th style="border:1px solid #0f316d;padding:9px 10px;font-size:12px;text-align:left;white-space:nowrap;">Time (IST)</th>
+                  <th style="border:1px solid #0f316d;padding:9px 10px;font-size:12px;text-align:left;">Action Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${stepRows}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </table>
     </div>
   `;
 
