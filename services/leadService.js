@@ -1,9 +1,36 @@
 const fs = require("fs");
 
-const { CSV_FILE, PRODUCT_MAP } = require("../config");
+const { CSV_FILE, PRODUCT_MAP, LEAD_STORAGE } = require("../config");
+const postgresLeadStore = require("./postgresLeadStore");
 const logger = require("../utils/logger");
 
 const CSV_HEADER = "timestamp,phone_number,wa_id,product,product_label,message_id\n";
+let warnedPostgresFallback = false;
+
+function shouldUsePostgres() {
+  if (LEAD_STORAGE !== "postgres") return false;
+  if (postgresLeadStore.isConfigured()) return true;
+
+  if (!warnedPostgresFallback) {
+    warnedPostgresFallback = true;
+    logger.warn("postgres_config_incomplete_fallback_csv", {
+      reason: "Set POSTGRES_HOST, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD",
+    });
+  }
+
+  return false;
+}
+
+async function ensureLeadStore() {
+  if (shouldUsePostgres()) {
+    await postgresLeadStore.init();
+    logger.info("lead_store_ready", { backend: "postgres" });
+    return;
+  }
+
+  ensureCsvFile();
+  logger.info("lead_store_ready", { backend: "csv" });
+}
 
 // Create the CSV lazily so first deployment works even on an empty volume.
 function ensureCsvFile() {
@@ -20,6 +47,19 @@ function ensureCsvFile() {
 
 function logLead({ phone, wa_id, product, productLabel, messageId }) {
   const timestamp = new Date().toISOString();
+
+  if (shouldUsePostgres()) {
+    postgresLeadStore
+      .insertLead({ timestamp, phone, wa_id, product, productLabel, messageId })
+      .then(() => {
+        logger.info("lead_logged", { phone, product, backend: "postgres" });
+      })
+      .catch((err) => {
+        logger.error("postgres_write_error", { error: err.message, phone, product });
+      });
+    return;
+  }
+
   // Minimal CSV escaping to preserve commas/quotes in values.
   const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
@@ -43,6 +83,15 @@ function logLead({ phone, wa_id, product, productLabel, messageId }) {
 }
 
 async function readLeadsFromCsv() {
+  if (shouldUsePostgres()) {
+    try {
+      return await postgresLeadStore.readLeads();
+    } catch (err) {
+      logger.error("postgres_read_error", { error: err.message });
+      return [];
+    }
+  }
+
   if (!fs.existsSync(CSV_FILE)) return [];
 
   const raw = (await fs.promises.readFile(CSV_FILE, "utf8")).trim();
@@ -163,6 +212,7 @@ function computeAnalytics(leads) {
 
 // Note: readLeadsFromCsv is async — callers must await it.
 module.exports = {
+  ensureLeadStore,
   ensureCsvFile,
   logLead,
   readLeadsFromCsv,

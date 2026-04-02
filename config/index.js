@@ -10,6 +10,15 @@ const TOKEN = env("TOKEN");
 const PHONE_NUMBER_ID = env("PHONE_NUMBER_ID");
 const APP_SECRET = env("APP_SECRET");
 
+const LEAD_STORAGE = String(env("LEAD_STORAGE") || "csv").toLowerCase();
+const POSTGRES_HOST = env("POSTGRES_HOST") || env("DB_HOST") || env("PGHOST");
+const POSTGRES_PORT = Number(env("POSTGRES_PORT") || env("DB_PORT") || env("PGPORT") || 5432);
+const POSTGRES_DB = env("POSTGRES_DB") || env("DB_NAME") || env("PGDATABASE");
+const POSTGRES_USER = env("POSTGRES_USER") || env("DB_USER") || env("PGUSER");
+const POSTGRES_PASSWORD = env("POSTGRES_PASSWORD") || env("DB_PASSWORD") || env("PGPASSWORD");
+const POSTGRES_SSL = String(env("POSTGRES_SSL") || "false").toLowerCase() === "true";
+const POSTGRES_POOL_MAX = Number(env("POSTGRES_POOL_MAX") || 10);
+
 const TESTER_ACCESS_ENABLED =
   String(process.env.TESTER_ACCESS_ENABLED || "false").toLowerCase() === "true";
 const TESTER_ALLOWED_PHONES = new Set(
@@ -51,6 +60,17 @@ function validateEnv() {
     );
   }
 
+  if (LEAD_STORAGE === "postgres") {
+    const hasPostgresConfig = Boolean(
+      POSTGRES_HOST && POSTGRES_DB && POSTGRES_USER && POSTGRES_PASSWORD
+    );
+    if (!hasPostgresConfig) {
+      warnings.push(
+        "LEAD_STORAGE is postgres but Postgres credentials are incomplete; app will fall back to CSV."
+      );
+    }
+  }
+
   for (const message of warnings) {
     warn(message);
   }
@@ -62,6 +82,14 @@ module.exports = {
   TOKEN,
   PHONE_NUMBER_ID,
   APP_SECRET,
+  LEAD_STORAGE,
+  POSTGRES_HOST,
+  POSTGRES_PORT,
+  POSTGRES_DB,
+  POSTGRES_USER,
+  POSTGRES_PASSWORD,
+  POSTGRES_SSL,
+  POSTGRES_POOL_MAX,
   TESTER_ACCESS_ENABLED,
   TESTER_ALLOWED_PHONES,
   WEBVIEW_LINK,

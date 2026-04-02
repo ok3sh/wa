@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 
 const { PORT, validateEnv } = require("./config");
-const { ensureCsvFile } = require("./services/leadService");
+const { ensureLeadStore } = require("./services/leadService");
 const { startCleanupJobs } = require("./services/sessionService");
 const requestContext = require("./middleware/requestContext");
 const { requestLogger, info, error: logError } = require("./utils/logger");
@@ -13,7 +13,6 @@ const systemRoutes = require("./routes/systemRoutes");
 
 // Validate startup prerequisites and initialize local state stores.
 validateEnv();
-ensureCsvFile();
 startCleanupJobs();
 
 const app = express();
@@ -40,14 +39,25 @@ app.use(webhookRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const server = app.listen(PORT, () => {
-  info("server_started", { port: PORT });
-  console.log(`Webhook server running on http://localhost:${PORT}`);
-  console.log("Dashboard available at /dashboard");
-});
+let server;
 
-server.on("error", (err) => {
-  logError("server_listen_error", { error: err.message, code: err.code });
+async function startServer() {
+  await ensureLeadStore();
+
+  server = app.listen(PORT, () => {
+    info("server_started", { port: PORT });
+    console.log(`Webhook server running on http://localhost:${PORT}`);
+    console.log("Dashboard available at /dashboard");
+  });
+
+  server.on("error", (err) => {
+    logError("server_listen_error", { error: err.message, code: err.code });
+    process.exit(1);
+  });
+}
+
+startServer().catch((err) => {
+  logError("server_startup_failed", { error: err.message });
   process.exit(1);
 });
 
@@ -55,6 +65,11 @@ server.on("error", (err) => {
 // leads aren't dropped mid-write during rolling deploys or container stops.
 function shutdown(signal) {
   info("shutdown_initiated", { signal });
+  if (!server) {
+    process.exit(0);
+    return;
+  }
+
   server.close(() => {
     info("server_closed");
     process.exit(0);

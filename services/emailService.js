@@ -9,7 +9,7 @@ const SMTP_IGNORE_TLS_ENV = process.env.SMTP_IGNORE_TLS;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const EMAIL_FROM = process.env.EMAIL_FROM || SMTP_USER || "no-reply@finfinity.co.in";
-const EMAIL_TO = process.env.EMAIL_TO || "connect@finfinity.co.in";
+const EMAIL_TO = process.env.EMAIL_TO || "admin@finfinity.co";
 
 // Singleton transporter — created once and reused for all sends to avoid
 // per-call TCP connection exhaustion and SMTP rate-limit thrashing.
